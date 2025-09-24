@@ -8,11 +8,13 @@ public class BossPattern : MonoBehaviour
     [SerializeField] private float disappearTime = 0.5f;
 
     [Header("레이저 설정")]
-    [SerializeField] private Transform laserOrigin; // 레이저가 발사될 위치
     [SerializeField] private GameObject laserBeam; // 레이저 오브젝트
-    [SerializeField] private float aimeDuration; // 조준시간
+    [SerializeField] private Transform laserOrigin; // 레이저가 발사될 위치
+    [SerializeField] private  Vector2 lazerDir; // 레이저 방향
+    [SerializeField] private  Transform scale; // 레이저 크기
+    [SerializeField] private float laserAimeDuration; // 조준시간
     [SerializeField] private float laserFireTime = 2f; // 레이저 발사 지속 시간
-    [SerializeField] private float endDuration = 1f; // 레이저 발사 지속 시간
+    [SerializeField] private float laserEndDuration = 1f; // 레이저가 사라지는 시간
 
     [SerializeField] private float laserWidth = 0.5f;
     [SerializeField] private LayerMask laserHitLayers;
@@ -30,13 +32,13 @@ public class BossPattern : MonoBehaviour
 
     void Awake()
     {
-        laserBeam.SetActive(false);
-        var ps = hitEffect.GetComponent<ParticleSystem>();
-        ps.Clear();
-        ps.Stop();
         sr = GetComponent<SpriteRenderer>();
         col = GetComponent<Collider2D>();
         rb = GetComponent<Rigidbody2D>();
+
+        laserBeam.SetActive(false);
+        lazerDir = -laserOrigin.right;
+        scale = laserBeam.GetComponent<Transform>();
     }
 
     // Update is called once per frame
@@ -45,28 +47,33 @@ public class BossPattern : MonoBehaviour
 
     }
 
-    public void StartAttack_1()
+    public void StartAttackPattern_1()
     {
         StartCoroutine(AttackPattern_1());
     }
     public IEnumerator AttackPattern_1()
     {
-        yield return StartCoroutine(TeleportToPosition());
+        yield return StartCoroutine(Teleport(1));
         yield return new WaitForSeconds(0.5f);
-        yield return StartCoroutine(LaserAttackRoutine());
+        yield return StartCoroutine(LaserAttack_1());
     }
 
-
-
-
-
-    //텔레포트
-    public void Teleport()
+    public void AttackPattern_1_Test()
     {
-        StartCoroutine(TeleportToPosition());
+        StartCoroutine(Teleport(1));
+        StartCoroutine(LaserAttack_1());
     }
 
-    public IEnumerator TeleportToPosition()
+
+
+    //텔레포트 0:대기실,1:오른쪽땅
+    //StartTeleport는 단일 테스트용. 패턴에 삽입할 함수는 Teleport(int point)
+    // public void StartTeleport()
+    // {
+    //     StartCoroutine(Teleport(1));
+    // }
+
+    public IEnumerator Teleport(int point)
     {
         // 1) 사라짐
         sr.enabled = false;          // 보스 스프라이트 숨김
@@ -79,7 +86,7 @@ public class BossPattern : MonoBehaviour
         yield return new WaitForSeconds(disappearTime);
 
         // 2) 위치 이동
-        transform.position = teleportPoint[1].position;
+        transform.position = teleportPoint[point].position;
 
         // 3) 다시 나타남
         rb.bodyType = RigidbodyType2D.Dynamic;
@@ -88,24 +95,28 @@ public class BossPattern : MonoBehaviour
 
         yield return null;
     }
-    //레이저 공격
 
-    //1. 레이저 나타남 (0->1)
-    //1-1. 레이저 충돌
-    //      플레이어에게 데미지 : 레이져 빔 크기
-    //      벽충돌 : 일직선으로 코드에서 확인.
-    //2. 레이저 사라짐 (1->0, 깜빡임)
+    // 레이저 공격 단일 테스트용 함. 실제 적용함수는 LaserAttack_1
+    // public void StartLaserAttack()
+    // {
+    //     StartCoroutine(LaserAttack_1());
+    // }
+    // public void StartLaserAttack_Endless()
+    // {
+    //     StartCoroutine(LaserAttack_1_Endless());
+    // }
+    // ============================
+    // private IEnumerator LaserAttack_1_Endless()
+    // {
+    //     // 1) 레이저 조준
+    //     yield return StartCoroutine(LaserAime());
+    //     // 2) 레이저 발사
+    //     yield return StartCoroutine(LaserFire(1000f));
+    // }
 
-    // ===== 레이저 공격 =====
-    public void StartLaserAttack()
-    {
-        StartCoroutine(LaserAttackRoutine());
-    }
-    public void StartLaserAttack_Endless()
-    {
-        StartCoroutine(LaserAttackRoutine_Endless());
-    }
-    private IEnumerator LaserAttackRoutine()
+
+    // 패턴이 적용된 함수
+    private IEnumerator LaserAttack_1()
     {
         // 1) 레이저 조준
         yield return StartCoroutine(LaserAime());
@@ -113,16 +124,7 @@ public class BossPattern : MonoBehaviour
         yield return StartCoroutine(LaserFire(laserFireTime));
         // 3) 레이저 종료
         yield return StartCoroutine(LaserEnd());
-        
-    }
-    private IEnumerator LaserAttackRoutine_Endless()
-    {
-        // 1) 레이저 조준
-        yield return StartCoroutine(LaserAime());
-        // 2) 레이저 발사
-        yield return StartCoroutine(LaserFire(1000f));
-        // 3) 레이저 종료
-        // laserBeam.SetActive(false);
+
     }
     
 
@@ -130,12 +132,9 @@ public class BossPattern : MonoBehaviour
     {
         // 보스 기준 바라보는 방향
         Vector2 lazerDir = -laserOrigin.right;
-
-
         // 2) 레이저 발사 시작
-        Vector3 scale = laserBeam.transform.localScale;
-        scale.y = 0f; // 두께 0으로 시작
-        laserBeam.transform.localScale = scale;
+        scale.localScale = new Vector2(scale.localScale.x,0f); // 두께 0으로 시작
+        // laserBeam.transform.localScale = scale;
         laserBeam.SetActive(true);
 
         var laserSprite = laserBeam.GetComponent<SpriteRenderer>();
@@ -143,10 +142,10 @@ public class BossPattern : MonoBehaviour
         // 크기 세팅 
         float elapsed = 0f;
 
-        while (elapsed < aimeDuration)
+        while (elapsed < laserAimeDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / aimeDuration;
+            float t = elapsed / laserAimeDuration;
 
             // 0 → laserMaxWidth 로 선형 보간
             float currentWidth = Mathf.Lerp(0f, laserWidth * 0.5f, t);
@@ -154,10 +153,9 @@ public class BossPattern : MonoBehaviour
             // 스케일 적용 (X축은 길이 유지, Y축만 두께 변화)
             lazerDir = -laserOrigin.right;
             RaycastHit2D hit = Physics2D.Raycast(laserOrigin.position, lazerDir, 25, laserHitLayers);
-            scale = laserBeam.transform.localScale;
-            scale.x = hit.distance;
-            scale.y = currentWidth;
-            laserBeam.transform.localScale = scale;
+            // scale = laserBeam.transform.localScale;
+            scale.localScale = new Vector2 (hit.distance,currentWidth);
+            // laserBeam.transform.localScale = scale;
 
 
             laserBeam.transform.localPosition = new Vector2(-hit.distance / 2f, 0);
@@ -166,23 +164,13 @@ public class BossPattern : MonoBehaviour
         }
 
         // 최종 보정
-        scale = laserBeam.transform.localScale;
-        scale.y = laserWidth;
-        laserBeam.transform.localScale = scale;
+        scale.localScale = new Vector2 (scale.localScale.x, laserWidth);
         laserSprite.color = Color.yellow;
     }
+    
     private IEnumerator LaserFire(float laserFireTime)
     {
-
         float elapsed = 0f;
-        // 보스 기준 바라보는 방향
-        Vector2 lazerDir = -laserOrigin.right;
-        // GameObject effect = Instantiate(hitEffect, teleportPoint[0].position, Quaternion.identity);
-        // var particle = effect.GetComponent<ParticleSystem>();
-        var scale = laserBeam.transform.localScale;
-        // particle.Clear();
-        // particle.Stop();
-
 
         while (elapsed < laserFireTime)
         {
@@ -193,14 +181,9 @@ public class BossPattern : MonoBehaviour
             // 충돌체크 - 벽
             if (hit.collider != null)
             {
-                // ShowHitEffect(effect, hit, particle);
-
-                scale.x = hit.distance;
-                laserBeam.transform.localScale = scale;
-                laserBeam.transform.localPosition = new Vector2(-hit.distance / 2f, 0);
-
+                scale.localScale = new Vector2 (hit.distance,scale.localScale.y);
+                scale.localPosition = new Vector2 (-hit.distance / 2f, 0);
             }
-            // else { particle.Stop(); }
 
             if (elapsed >= nextSpawnTime)
             {
@@ -208,29 +191,24 @@ public class BossPattern : MonoBehaviour
                 Destroy(effect, 0.5f); // 1초 뒤 삭제
                 nextSpawnTime += interval;
             }
+
             yield return null;
         }
         nextSpawnTime = 0f;
-        // particle.Stop();
-        // Destroy(effect, 1f); // 1초 뒤 삭제
     }
-    private void ShowHitEffect(GameObject effect, RaycastHit2D hit, ParticleSystem particle)
-    {
-        effect.transform.position = hit.point;
-        particle.Play();
-    }
+    
     private IEnumerator LaserEnd()
     {
         float elapsed = 0f;
         Vector2 scale;
 
-        while (elapsed < endDuration)
+        while (elapsed < laserEndDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / endDuration;
+            float t = elapsed / laserEndDuration;
 
             // 0 → laserMaxWidth 로 선형 보간
-            float currentWidth = Mathf.Lerp(laserWidth , laserWidth * 0.5f, t);
+            float currentWidth = Mathf.Lerp(laserWidth, laserWidth * 0.5f, t);
 
             // 스케일 적용 (X축은 길이 유지, Y축만 두께 변화)
             scale = laserBeam.transform.localScale;
@@ -239,7 +217,7 @@ public class BossPattern : MonoBehaviour
 
             yield return null;
         }
-        
+
         laserBeam.SetActive(false);
     }
 }

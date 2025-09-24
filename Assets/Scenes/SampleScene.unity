@@ -989,7 +989,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &512646230
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1056,7 +1056,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 690548912}
         m_TargetAssemblyTypeName: BossPattern, Assembly-CSharp
-        m_MethodName: Teleport
+        m_MethodName: StartTeleport
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1646,11 +1646,13 @@ MonoBehaviour:
   - {fileID: 378120704}
   - {fileID: 1353499304}
   disappearTime: 0.5
-  laserOrigin: {fileID: 281308886}
   laserBeam: {fileID: 732988044}
-  aimeDuration: 0.2
+  laserOrigin: {fileID: 281308886}
+  lazerDir: {x: 0, y: 0}
+  scale: {fileID: 0}
+  laserAimeDuration: 0.3
   laserFireTime: 1
-  endDuration: 0.3
+  laserEndDuration: 0.4
   laserWidth: 0.5
   laserHitLayers:
     serializedVersion: 2
@@ -1813,7 +1815,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!212 &732988045
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -2445,7 +2447,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1441244940
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2512,7 +2514,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 690548912}
         m_TargetAssemblyTypeName: BossPattern, Assembly-CSharp
-        m_MethodName: StartLaserAttack
+        m_MethodName: StartAttackPattern_1
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2733,7 +2735,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 690548912}
         m_TargetAssemblyTypeName: BossPattern, Assembly-CSharp
-        m_MethodName: StartAttack_1
+        m_MethodName: StartAttackPattern_1
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2936,7 +2938,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1938733085
 RectTransform:
   m_ObjectHideFlags: 0
