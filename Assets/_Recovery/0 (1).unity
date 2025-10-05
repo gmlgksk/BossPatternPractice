@@ -1919,6 +1919,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1234830635
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1234830636}
+  m_Layer: 0
+  m_Name: Boss Teleport Point_Right (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1234830636
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1234830635}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 17.21136, y: -9.37327, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1604495113}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1284301228
 GameObject:
   m_ObjectHideFlags: 0
@@ -2393,18 +2424,6 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 3433650030788088797, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6453706914423843712, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpDuration
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
       propertyPath: movePoints.Array.size
       value: 2
@@ -2416,71 +2435,7 @@ PrefabInstance:
     - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
       propertyPath: 'movePoints.Array.data[1]'
       value: 
-      objectReference: {fileID: 1928141068}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.size
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[1].time
-      value: 0.4998778
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[2].time
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[1].value
-      value: 0.999189
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[2].value
-      value: 0.0007544309
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[0].inSlope
-      value: 1.9988666
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[1].inSlope
-      value: 0.0012426376
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[2].inSlope
-      value: -1.9963813
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[0].outSlope
-      value: 1.9988666
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[1].inWeight
-      value: 0.33333334
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[1].outSlope
-      value: 0.0012426376
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[2].inWeight
-      value: 0.33333334
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[2].outSlope
-      value: -1.9963813
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[0].outWeight
-      value: 0.33333334
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[1].outWeight
-      value: 0.33333334
-      objectReference: {fileID: 0}
-    - target: {fileID: 7133393163239798649, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
-      propertyPath: jumpHeightCurve.m_Curve.Array.data[2].tangentMode
-      value: 34
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1234830636}
     - target: {fileID: 8314437220368747000, guid: 48c67b9bf3aed14428fa3ca499b86f50, type: 3}
       propertyPath: m_LocalPosition.x
       value: 4.26517
@@ -2585,9 +2540,9 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 378120704}
   - {fileID: 1353499304}
-  - {fileID: 1928141068}
+  - {fileID: 1234830636}
+  - {fileID: 378120704}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1679251706
@@ -2730,7 +2685,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1515568702}
         m_TargetAssemblyTypeName: BossPattern2, Assembly-CSharp
-        m_MethodName: StartJumpPattern
+        m_MethodName: StartJumpAttack
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3047,37 +3002,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2079775738}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1928141067
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1928141068}
-  m_Layer: 0
-  m_Name: Boss Teleport Point_Right (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1928141068
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1928141067}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 16.21136, y: -9.37327, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1604495113}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1938733084
 GameObject:
