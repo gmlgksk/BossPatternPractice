@@ -18,6 +18,9 @@ public class BossPattern2 : MonoBehaviour
         StartCoroutine(JumpCourseRoutine());
     }
 
+
+    
+
     private IEnumerator JumpCourseRoutine()
     {
 

@@ -3572,9 +3572,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  spin_z_rd: -30
-  spin_z_at: -180
-  spin_z_ld: -360
 --- !u!114 &1515568712
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5525,7 +5522,7 @@ Transform:
   m_GameObject: {fileID: 1138114011610001101}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 6.74, y: -3.64, z: 0}
+  m_LocalPosition: {x: 6.26517, y: -2.37813, z: 0}
   m_LocalScale: {x: 1, y: 1.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

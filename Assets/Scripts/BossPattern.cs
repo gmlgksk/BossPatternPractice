@@ -4,7 +4,9 @@ using UnityEngine;
 public class BossPattern : MonoBehaviour
 {
     [Header("텔레포트 설정")]
-    [SerializeField] private Transform[] teleportPoint;
+    
+    [SerializeField] private Transform greenRoom;
+    [SerializeField] private Transform teleportPoint;
     [SerializeField] private float disappearTime = 0.5f;
 
     [Header("레이저 설정")]
@@ -53,14 +55,14 @@ public class BossPattern : MonoBehaviour
     }
     public IEnumerator AttackPattern_1()
     {
-        yield return StartCoroutine(Teleport(1));
-        yield return new WaitForSeconds(0.5f);
+        yield return StartCoroutine(Teleport(teleportPoint));
+        yield return new WaitForSeconds(0.2f);
         yield return StartCoroutine(LaserAttack_1());
     }
 
     public void AttackPattern_1_Test()
     {
-        StartCoroutine(Teleport(1));
+        StartCoroutine(Teleport(teleportPoint));
         StartCoroutine(LaserAttack_1());
     }
 
@@ -73,20 +75,21 @@ public class BossPattern : MonoBehaviour
     //     StartCoroutine(Teleport(1));
     // }
 
-    public IEnumerator Teleport(int point)
+    public IEnumerator Teleport(Transform point)
     {
         // 1) 사라짐
         sr.enabled = false;          // 보스 스프라이트 숨김
         if (col != null) col.enabled = false; // 충돌도 잠시 끔
         rb.bodyType = RigidbodyType2D.Static;
-        transform.position = teleportPoint[0].position;
+        transform.position = greenRoom.position;
+        // transform.position = teleportPoint[0].position;
 
 
         // 0.5초 대기
         yield return new WaitForSeconds(disappearTime);
 
         // 2) 위치 이동
-        transform.position = teleportPoint[point].position;
+        transform.position = point.position;
 
         // 3) 다시 나타남
         rb.bodyType = RigidbodyType2D.Dynamic;
