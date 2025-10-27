@@ -17,6 +17,7 @@ public class Laser : MonoBehaviour
     [SerializeField] private LayerMask laserHitLayers;
 
     [Header("이펙트 설정")]
+    [SerializeField] private ObjectPool_laserDust laserDust;
     [SerializeField] private GameObject hitEffect;
     [SerializeField] private float nextSpawnTime = 0f;
     [SerializeField] private float interval = 0.2f;
