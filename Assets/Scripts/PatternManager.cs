@@ -143,12 +143,13 @@ public class PatternManager : MonoBehaviour
     // 너무 가까울 때, 적당히 멀때, 아주 멀때.
 
     // 다중 실행 가드
+    [Header("플레이어 인식 범위")]
     Coroutine _loop;
     bool _running;
-    float soClose = 3f;
-    float close = 7f;
-    float far = 12f;
-    float bossInterval = .4f;
+    [SerializeField] private float soClose = 5f;
+    [SerializeField] private float close = 10f;
+    [SerializeField] private float far = 20f;
+    float patternInterval = .4f;
     float soClose2, close2, far2;
     
     public void StartPattern_Distance()
@@ -163,6 +164,7 @@ public class PatternManager : MonoBehaviour
         _loop = null;
         _running = false;
     }
+    
     public IEnumerator Pattern_PlayerCheck()
     {
         if (_running) yield break;          // 재진입 방지
@@ -194,7 +196,7 @@ public class PatternManager : MonoBehaviour
                     break;
             }
 
-            yield return new WaitForSeconds(bossInterval);
+            yield return new WaitForSeconds(patternInterval);
         }
     }
 
