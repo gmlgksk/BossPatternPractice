@@ -5,16 +5,17 @@ TagManager:
   serializedVersion: 3
   tags:
   - Wall
+  - Attack
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Structure
   - Water
   - UI
   - 
   - 
-  - 
+  - Invisiable
   - 
   - 
   - 
