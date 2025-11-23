@@ -43,6 +43,24 @@ public class PatternManager : MonoBehaviour
     [SerializeField] private float maxY = 1f;
     [SerializeField] private float attackTime = .5f;
 
+    // 조건 #1 - 플레이어 체크
+    [Header("플레이어 체크")]
+    [SerializeField] private Transform PlayerPos;
+
+    // 다중 실행 가드
+    [Header("플레이어 인식 범위")]
+    Coroutine _loop;
+    bool _running;
+    [SerializeField] private float soClose = 5f;
+    [SerializeField] private float close = 10f;
+    [SerializeField] private float far = 20f;
+    float patternInterval = .4f;
+    float soClose2, close2, far2;
+
+    private bool loopIsRunning = false;
+    private Func<IEnumerator>[] patterns;
+    private float loopInterval = 0.5f;
+    
     void Start()
     {
         tp = GetComponent<Teleport>();
@@ -66,32 +84,6 @@ public class PatternManager : MonoBehaviour
         // Quaternion.Euler(0,0,rotationZ); ;
     }
 
-    // 알고리즘
-
-    // public IEnumerator pattern_1()
-    // {
-    //     int rand_i = 0;
-    //     switch (rand_i)
-    //     {
-    //         case 0:
-    //             yield return StartCoroutine("WideATK");
-    //             yield return rand_i = UnityEngine.Random.Range(0, 3);
-    //             break;
-    //         case 1:
-    //             yield return StartCoroutine("RainATK");
-    //             yield return rand_i = UnityEngine.Random.Range(0, 3);
-    //             break;
-    //         case 2:
-    //             yield return StartCoroutine("SpinATK");
-    //             yield return rand_i = UnityEngine.Random.Range(0, 3);
-    //             break;
-    //         default:
-    //             yield return rand_i = UnityEngine.Random.Range(0, 3);
-    //             break;
-    //     }
-
-    // }
-    private bool loopIsRunning = false;
     public void StartPattern_Random()
     {
         if (loopIsRunning == true) return;
@@ -100,12 +92,15 @@ public class PatternManager : MonoBehaviour
         loopIsRunning = true;
     }
 
-    public void StopPatternLoopButton()
+    public void StopPattern()
     {
+        rb.gravityScale = originGravityScale;
+        ls.LaserDisable();
         StopAllCoroutines(); // 또는 특정 코루틴을 변수로 저장해 중지 가능
+        StopPattern_Distance();
     }
-    private Func<IEnumerator>[] patterns;
-    private float loopInterval = 0.5f;
+
+    
     public IEnumerator Pattern_Random(float loopInterval)
     {
         int last = -1;
@@ -131,9 +126,6 @@ public class PatternManager : MonoBehaviour
 
 
 
-    // 조건 #1 - 플레이어 체크
-    [Header("플레이어 체크")]
-    [SerializeField] private Transform PlayerPos;
     public float PlayerDisCheck()
     {
         Vector2 d = (Vector2)PlayerPos.position - (Vector2)transform.position;
@@ -144,20 +136,11 @@ public class PatternManager : MonoBehaviour
     // 조건 #2 - 수행할 패턴 판단
     // 너무 가까울 때, 적당히 멀때, 아주 멀때.
 
-    // 다중 실행 가드
-    [Header("플레이어 인식 범위")]
-    Coroutine _loop;
-    bool _running;
-    [SerializeField] private float soClose = 5f;
-    [SerializeField] private float close = 10f;
-    [SerializeField] private float far = 20f;
-    float patternInterval = .4f;
-    float soClose2, close2, far2;
     
     public void StartPattern_Distance()
     {
         if (_loop != null) return;          // 중복 실행 방지
-        _loop = StartCoroutine(Pattern_PlayerCheck());
+        _loop = StartCoroutine(Pattern_PlayerDistanceCheck());
     }
 
     public void StopPattern_Distance()
@@ -167,7 +150,7 @@ public class PatternManager : MonoBehaviour
         _running = false;
     }
     
-    public IEnumerator Pattern_PlayerCheck()
+    public IEnumerator Pattern_PlayerDistanceCheck()
     {
         if (_running) yield break;          // 재진입 방지
         _running = true;
@@ -281,30 +264,27 @@ public class PatternManager : MonoBehaviour
     }
     public IEnumerator JumpATKCoroutine()
     {
-        
 
+        // 공격방향 우측
+        yield return rb.gravityScale = 0f;
 
-        // // 공격방향 우측
-        // yield return rb.gravityScale = 0f;
+        // 1. 이동 및 회전
+        StartCoroutine(mv.MoveTo(Center_Point.position, spin_ready, duration, maxY));
+        yield return StartCoroutine(RotateByOverDuration(spin_z_rd, duration));
+        Flip();
 
-        // // 1. 이동 및 회전
-        // StartCoroutine(mv.MoveTo(Center_Point.position, spin_ready, duration, maxY));
-        // yield return StartCoroutine(RotateByOverDuration(spin_z_rd, duration));
-        // Flip();
+        // 2. 공격 및 회전
+        StartCoroutine(ls.LaserATK(0f, attackTime, 0f));
+        yield return StartCoroutine(RotateByOverDuration(spin_z_at, attackTime));
 
-        // // 2. 공격 및 회전
-        // StartCoroutine(ls.LaserATK(0f, attackTime, 0f));
-        // yield return StartCoroutine(RotateByOverDuration(spin_z_at, attackTime));
+        // 3. 공격종료 및 착지
 
-        // // 3. 공격종료 및 착지
+        yield return StartCoroutine(ls.LaserEndFor(0f));
+        Flip();
+        StartCoroutine(mv.MoveTo(R_Down_Point.position, spin_end, duration, maxY));
+        yield return StartCoroutine(RotateByOverDuration(spin_z_ld, duration));
 
-        // yield return StartCoroutine(ls.LaserEndFor(0f));
-        // Flip();
-        // StartCoroutine(mv.MoveTo(R_Down_Point.position, spin_end, duration, maxY));
-        // yield return StartCoroutine(RotateByOverDuration(spin_z_ld, duration));
-
-        // rb.gravityScale = originGravityScale;
-
+        rb.gravityScale = originGravityScale;
         yield return null;
     }
     

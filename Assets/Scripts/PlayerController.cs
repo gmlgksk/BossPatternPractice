@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -26,53 +27,70 @@ public class PlayerController : MonoBehaviour
     // ===== 기본 파라미터 =====
 
     [Header("Anim")]
-    [SerializeField] float animSpeed = 1f;
+    [SerializeField] private float animSpeed = 1f;
     
     [Header("Move")]
-    [SerializeField] float moveSpeed = 8f;
-    [SerializeField] float accel = 60f;
-    [SerializeField] float deccel = 70f;
-    [SerializeField] float airControl = 0.8f;
-    [SerializeField] float maxFallSpeed = -20f;
+    [SerializeField] private float moveSpeed = 8f;
+    [SerializeField] private float accel = 60f;
+    [SerializeField] private float deccel = 70f;
+    [SerializeField] private float airControl = 0.8f;
+    [SerializeField] private float maxFallSpeed = -20f;
 
     [Header("Jump")]
-    [SerializeField] float jumpForce = 12f;
-    [SerializeField] int   maxJumpCount = 2;
-    [SerializeField] float coyoteTime = 0.1f;
-    [SerializeField] float jumpBuffer = 0.1f;
+    [SerializeField] private float jumpForce = 12f;
+    [SerializeField] private int   maxJumpCount = 2;
+    [SerializeField] private float coyoteTime = 0.1f;
+    [SerializeField] private float jumpBuffer = 0.1f;
 
     [Header("Wall")]
-    [SerializeField] float wallSlideMaxSpeed = -2.5f;
     [SerializeField] Vector2 wallJumpDir = new Vector2(1.0f, 1.1f);
-    [SerializeField] float wallJumpForce = 12f;
-    [SerializeField] float wallJumpControlLock = 0.15f;
+    [SerializeField] private float wallJumpForce = 12f;
+    [SerializeField] private float wallJumpControlLock = 0.15f;
+    [SerializeField] private float wallSlideSlowTime = 1f; // 최대 속도까지 도달하는 시간
+    [SerializeField] private float wallSlideMaxSpeed = -10f; // 음수(아래 방향)로 두는 걸 추천
+    [SerializeField] private float wallSlideHoldTime  = 0.1f; // 잠깐 멈추는 시간
+    float wallSlideElapsed = 0f; // 벽 슬라이드 경과 시간
+    float wallSlideAnchorY = 0f;   // '멈춰 있는' 동안 유지할 Y 위치
+    bool  wallSlideHolding = false; // 지금 정지 구간인지 여부
 
     [Header("Dash")]
-    [SerializeField] float dashSpeed = 18f;
+    [SerializeField] private float dashSpeed = 18f;
 
     [Header("Detect")]
-    [SerializeField] LayerMask groundMask;
-    [SerializeField] LayerMask wallMask;
-    [SerializeField] Transform groundCheck;
-    [SerializeField] Transform wallCheck;
-    [SerializeField] float groundDist = 0.12f;
-    [SerializeField] Vector2 wallBox = new Vector2(0.12f, 0.9f);
+    [SerializeField] private LayerMask whatIsGround;
+    [SerializeField] private LayerMask WhatIsWall;
+    [SerializeField] private float groundCheckDistance = 1.6f;
+    [SerializeField] private float wallCheckDistance = 1f;
+
     [Header("내부 상태 보조")]
-    [SerializeField] int faceDir = 1;     // 1 오른쪽, -1 왼쪽
-    [SerializeField] float inputX;        // 연속 입력
-    [SerializeField] float rawX;          // 원시 입력
+    [SerializeField] private int faceDir = 1;     // 1 오른쪽, -1 왼쪽
+    [SerializeField] private float inputX;        // 연속 입력
+    [SerializeField] private float rawX;          // 원시 입력
+    [SerializeField] private int jumpCount;
+    [SerializeField] private float lastGroundTime;
+    [SerializeField] private float lastJumpPress;
+    [SerializeField] private float wallLock;
+    [SerializeField] private float originGravity;
 
-    [SerializeField] int jumpCount;
-    [SerializeField] float lastGroundTime;
-    [SerializeField] float lastJumpPress;
-    [SerializeField] float wallLock;
     [Header("Attack")]  
-
-    [SerializeField] float attackLimitTime=3f;
+    [SerializeField] float attackStateTime=1.5f;
+    [SerializeField] float attackLimitTime=1f;
     [SerializeField] float attackRemainTime;
+    [SerializeField] private float attackForce=8;
+    public GameObject attackObject;
+    private AttackAnimation attackAnim;
+    [Header("Attack details")]
+    [SerializeField]protected float attackRadius = 3.5f;
+    [SerializeField]protected Transform attackPoint;
+    [SerializeField]protected LayerMask whatIsTarget;
+    
+
     [Header("입력 요청 (우선순위용)")]
-    [SerializeField] bool reqAttack, reqJump, reqDash;
+    [SerializeField] bool reqAttack;
+    [SerializeField] bool reqJump;
+    [SerializeField] bool reqDash;
     [SerializeField] bool reqMove; // “이동 의도” 플래그
+
 
     // ===== 수치 상수 =====
     const float eps = 0.01f;
@@ -83,8 +101,9 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         mouseDirScript=GetComponent<MouseDirectionFromPlayer>();
-        
+        originGravity = GetComponent<Rigidbody2D>().gravityScale;
         jumpCount = maxJumpCount;
+        attackAnim = attackObject.GetComponentInChildren<AttackAnimation>();
     }
 
     // ===================== 입력 =====================
@@ -120,8 +139,9 @@ public class PlayerController : MonoBehaviour
             faceDir = lastKeyDir;
         }
     }
-    private bool prevLeft;
-    private bool prevRight;
+    private bool prevLeftKey;
+    private bool prevRightKey;
+
     public void SetMoveDir()
     {
         var kb = Keyboard.current;
@@ -130,12 +150,12 @@ public class PlayerController : MonoBehaviour
         bool left  = kb.aKey.isPressed;
         bool right = kb.dKey.isPressed;
 
-        bool leftDown  = left  && !prevLeft;
-        bool rightDown = right && !prevRight;
+        bool leftDown  = left  && !prevLeftKey;
+        bool rightDown = right && !prevRightKey;
 
         // 이전 프레임 상태 갱신
-        prevLeft  = left;
-        prevRight = right;
+        prevLeftKey  = left;
+        prevRightKey = right;
 
         // === 1) 둘 다 눌려 있는 경우 ===
         if (left && right)
@@ -191,6 +211,69 @@ public class PlayerController : MonoBehaviour
         if (ctx.performed) reqAttack = true;
     }
 
+    public void Handle_Animations()
+    {
+        anim.SetFloat("yVelocity",rb.linearVelocityY);
+        anim.SetBool("isGround",isGround);
+        anim.SetBool("isWall", isWall);
+    }
+    void Handle_Movement()
+    {
+        if (Current == ActionState.Dash || Current == ActionState.Attack)
+            return;
+
+        if (Current == ActionState.WallSlide)
+        {
+            HandleWallSlide(Time.fixedDeltaTime);
+            return; // 벽슬라이드 중엔 아래쪽 처리(수평이동) 스킵
+        }
+        // 🔹 락 중엔 수평속도 손대지 않음 (계속 같은 속도로 날아감)
+        if (wallLock > 0f || (inputX ==0&&!isGround))   return;
+        if (Current == ActionState.WallSlide)           return;
+        if (Current == ActionState.Attack)              return;
+
+        float controlRate = (isAir && !isWall) ? airControl : 1f;
+        float targetX = inputX * moveSpeed * controlRate;
+
+        float curX = rb.linearVelocityX;
+        float rate = (Mathf.Abs(targetX) > 0.01f) ? accel : deccel;
+
+        rb.linearVelocityX = Mathf.MoveTowards(curX, targetX, rate * Time.fixedDeltaTime);
+    }
+
+    void HandleWallSlide(float dt)
+    {
+        // 위로 튀는 중이면 무시
+        if (rb.linearVelocityY > 0f) {
+            wallSlideElapsed = 0f;
+            return;
+        }
+        else wallSlideAnchorY = rb.position.y; // 붙은 순간의 Y 를 기억
+
+        wallSlideElapsed += dt;
+
+        // 🔹 1) 정지 구간: 완전히 멈추고, 위치도 고정
+        if (wallSlideElapsed < wallSlideHoldTime)
+        {
+            // Y 속도 0으로 강제
+            rb.linearVelocityY = 0f;
+            // Y 위치를 아예 고정해서 살살 내려가는 것도 막기
+            rb.position = new Vector2(rb.position.x, wallSlideAnchorY);
+            return;
+        }
+        
+
+        // 2) holdTime 이후부터 slowTime 동안 서서히 wallSlideMaxSpeed로 보간
+        float t = (wallSlideElapsed - wallSlideHoldTime) / wallSlideSlowTime;
+        t = Mathf.Clamp01(t);   // 0 ~ 1
+
+        float targetY = wallSlideMaxSpeed;  // ex) -4f
+        float newY = Mathf.Lerp(0f, targetY, t);
+
+        rb.linearVelocityY = newY;
+    }
+
+
     // ===================== 메인 루프 =====================
     void Update()
     {
@@ -210,32 +293,29 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        anim.SetFloat("yVelocity",rb.linearVelocityY);
-        anim.SetBool("isGround",isGround);
-        ApplyMovement(Time.fixedDeltaTime);
+        Handle_Animations();
+        Handle_Movement();
         ClampFall();
     }
 
     // ===================== 1) 대전제 판정 =====================
+    private void GroundCheck()=>isGround = Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround);
+    private void WallCheck()=>isWall = Physics2D.Raycast(transform.position, Vector2.right * faceDir, wallCheckDistance, WhatIsWall);
     void SenseBigState()
     {
         // Ground 우선
-        Vector2 gOrigin = groundCheck ? (Vector2)groundCheck.position : (Vector2)transform.position + Vector2.down * 0.5f;
-        isGround = Physics2D.Raycast(gOrigin, Vector2.down, groundDist, groundMask);
-
+        GroundCheck();
         if (isGround)
         {
             isWall = false;
             isAir  = false;
             lastGroundTime = Time.time;
-            jumpCount = maxJumpCount;
+            
             return;
         }
 
         // 그 다음 Wall
-        Vector2 wCenter = wallCheck ? (Vector2)wallCheck.position : (Vector2)transform.position + new Vector2(faceDir * 0.4f, 0f);
-        isWall = Physics2D.OverlapBox(wCenter, wallBox, 0f, wallMask);
-
+        WallCheck();
         if (isWall)
         {
             isAir = false;
@@ -252,25 +332,18 @@ public class PlayerController : MonoBehaviour
     {
         // 우선순위: Attack > Jump/WallJump > Dash > Move
         if (reqAttack && attackRemainTime<=0) return ActionState.Attack;
-        
-        
-        // // 버퍼/코요테 허용
-        // bool bufferedJump = reqJump && (Time.time - lastJumpPress <= jumpBuffer);
-        // bool canCoyote    = (Time.time - lastGroundTime) <= coyoteTime;
 
-        // if (bufferedJump)
-        // {
-        //     if (isWall && jumpCount > 0) return ActionState.WallJump;                 // 벽 전제 → 벽점프
-        //     if (isGround && canCoyote && jumpCount > 0) return ActionState.Jump; // 일반/이중 점프
-        // }
-        if (reqJump && isWall && jumpCount > 0) 
+        if (reqJump && jumpCount > 0)
         {
-            return ActionState.WallJump;
-        }
-        if (reqJump && isGround && jumpCount > 0)
-        {
-            return ActionState.Jump;  
+            if (isGround)
+                return ActionState.Jump;  
+            if (isWall)
+                return ActionState.WallJump;  
         } 
+        if (isWall && rb.linearVelocityY<=0) 
+        {
+            return ActionState.WallSlide;
+        }
 
         if (reqDash && isGround) {
             return ActionState.Dash;
@@ -297,28 +370,15 @@ public class PlayerController : MonoBehaviour
         }
         if (Current == ActionState.Dash) return;
 
-        // if (!CanEnter(next)) // 대전제/관계 위배 시, 패시브로 롤백
-        // {
-        //     // 대전제 기반 기본상태로
-        //     next = (isGround) ? (reqMove ? ActionState.Move : ActionState.Idle)
-        //          : (isWall) ? ActionState.WallSlide
-        //          : ActionState.Fall;
-        //     if (!CanEnter(next)) return; // 안전장치
-        // }
-        
         if (!CanEnter(next)) return;
 
         if (next != Current) Enter(next);
 
     }
-
-    public void ExitCurrentState() => Current = ActionState.Idle;
-
-
-
     bool CanEnter(ActionState next)
     {
         // 현재/요구/대전제 관계 규칙을 한 곳에 정리
+        // 관계 중심 : 다른 상태와 우선순위 경쟁
         switch (next)
         {
             case ActionState.Dead:
@@ -333,7 +393,7 @@ public class PlayerController : MonoBehaviour
                 // 전제: Ground or Coyote or 남은점프>0
                 // bool canCoyote = (Time.time - lastGroundTime) <= coyoteTime;
                 // return isGround || canCoyote || jumpCount > 0;
-                return isGround || jumpCount > 0;
+                return true;
             
             case ActionState.Fall:
                 if (Current == ActionState.Dead ) return false;
@@ -342,8 +402,8 @@ public class PlayerController : MonoBehaviour
             case ActionState.WallJump:
                 // 실패: Dead/Attack/대시 중
                 if (Current == ActionState.Dead || Current == ActionState.Attack || Current == ActionState.Dash) return false;
-                // 전제: isWall
-                return isWall;
+                // 전제: isWall -> TryTransition()에서 점검했음
+                return true;
 
             case ActionState.Dash:
                 // 실패: Dead/Attack/쿨다운
@@ -364,52 +424,44 @@ public class PlayerController : MonoBehaviour
 
             case ActionState.WallSlide:
                 if (Current == ActionState.Dead || Current == ActionState.Attack || Current == ActionState.Dash) return false;
-                return isWall;
+                return true;
 
             default:
                 return false;
         }
     }
-    [SerializeField] private float attackForce=8;
-    public GameObject attackSprite;
     void Enter(ActionState next)
     {
         // 상태 나갈 때 정리(필요 최소만)
         Exit(Current);
         Current = next;
-
+        rb.gravityScale = originGravity;
+        if (next == ActionState.WallSlide)
+        {
+            wallSlideElapsed = 0f;
+        }
         // 들어가며 애니/플래그/즉시동작
         switch (Current)
         {
             case ActionState.Attack:
                 attackRemainTime = attackLimitTime;        // 잠금 시간
+                DamageTargets();
+                rb.gravityScale = originGravity/4;
                 if (mouseDirScript.MouseDirection.x>0 && faceDir == -1 ||
                     mouseDirScript.MouseDirection.x<0 && faceDir == 1) faceDir *= -1;
                 Filp();
-
                 Vector2 WorldMouseDir=mouseDirScript.MouseDirection * faceDir;
-
-                
-                attackSprite.gameObject.SetActive(true);
-                attackSprite.transform.right = WorldMouseDir;
-
+                attackObject.SetActive(true);
+                attackAnim.Play();
+                attackObject.transform.right = WorldMouseDir;
                 // 공격반동 설정
-
-                rb.linearVelocity = Vector2.zero;
-                // rb.AddForce(mouseDirScript.MouseDirection * attackForce,ForceMode2D.Impulse);
-                rb.linearVelocity = mouseDirScript.MouseDirection * attackForce;
-
-                anim.SetBool("isRunning", false);
-                anim.SetBool("isWallSlide", false);
-                anim.SetBool("isJump", false);
+                rb.linearVelocity /=3;
+                rb.AddForce(mouseDirScript.MouseDirection * attackForce,ForceMode2D.Impulse);
+                anim.SetBool("isRun", false);
                 anim.SetTrigger("isAttack");
-
                 break;
 
             case ActionState.Jump:
-                // 점프 카운트 소비, 수직속도 리셋 후 가속
-                // if (!isGround) jumpCount = Mathf.Max(0, jumpCount - 1);
-                // else           jumpCount = maxJumpCount - 1;
                 jumpCount = Mathf.Max(0, jumpCount - 1);
                 rb.linearVelocityY = 0f;
                 rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
@@ -419,13 +471,29 @@ public class PlayerController : MonoBehaviour
                 break;
 
             case ActionState.WallJump:
-                // 벽 반대 방향으로 튕김 + 입력 잠깐 잠금
+                // 1) 벽 반대 방향을 바라보도록 뒤집기
                 faceDir *= -1;
-                var away = new Vector2(faceDir, 1);
+                Filp();
+                anim.SetBool("isWall", false);
+
+                // 2) 잠깐 입력 잠그기 (수평 속도 유지용)
                 wallLock = wallJumpControlLock;
-                rb.linearVelocityY = 0f;
-                rb.AddForce(wallJumpDir * wallJumpForce * away, ForceMode2D.Impulse);
-                anim.SetTrigger("isWallJump");
+
+                // 3) 점프 카운트 소비
+                jumpCount = Mathf.Max(0, jumpCount - 1);
+
+                // 4) 기존 속도 리셋 (원한다면 전체 리셋도 가능)
+                rb.linearVelocity = Vector2.zero;
+                // 혹은 수평만 유지/리셋하고 싶다면:
+                // rb.linearVelocityY = 0f;
+
+                // 5) faceDir을 이용해 “바깥쪽 + 위쪽”으로 점프 벡터 구성
+                Vector2 dir = new Vector2(faceDir * wallJumpDir.x, wallJumpDir.y);
+                dir.Normalize(); // 혹은 wallJumpDir을 애초에 정규화해서 써도 OK
+                isWall = false;
+                rb.AddForce(dir * wallJumpForce, ForceMode2D.Impulse);
+
+                Current = ActionState.Jump;
                 break;
 
             case ActionState.Dash:
@@ -434,37 +502,57 @@ public class PlayerController : MonoBehaviour
                 break;
 
             case ActionState.Move:
-                anim.SetBool("isRunning", true);
+                jumpCount = maxJumpCount;
+                anim.SetBool("isRun", true);
                 break;
 
             case ActionState.Idle:
-                anim.SetBool("isRunning", false);
-                anim.SetBool("isWallSlide", false);
-                anim.SetBool("isJump", false);
+                jumpCount = maxJumpCount;
+                anim.SetBool("isRun", false);
                 break;
 
             case ActionState.WallSlide:
-                anim.SetBool("isWallSlide", true);
+                rb.gravityScale /=2;
+                
+                jumpCount = Mathf.Max(jumpCount + 1,maxJumpCount);
                 break;
             }
     }
-
     void Exit(ActionState prev)
     {
         switch (prev)
         {
             case ActionState.Move:
-                anim.SetBool("isRunning", false);
+                anim.SetBool("isRun", false);
                 break;
-            case ActionState.WallSlide:
-                anim.SetBool("WallSlide", false);
+            case ActionState.Attack:
+                
                 break;
-            case ActionState.Jump:
-                anim.SetBool("isJump", false);
-                break;
+            
             // Attack/Dash/Jump/WallJump 등은 타이머로 자연 종료
         }
     }
+
+
+    public void ExitCurrentState()
+    {
+        if (isAir) Enter(ActionState.Fall) ;
+        else if (isWall) Enter(ActionState.WallSlide);
+        else if (isGround) Enter(ActionState.Idle);
+
+    }
+
+    public void DamageTargets()
+    {
+        Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(attackPoint.position, attackRadius, whatIsTarget);
+        
+        foreach (Collider2D enemy in enemyColliders)
+        {
+            HP entityTarget = enemy.GetComponent<HP>();
+            entityTarget.TakeDamage();
+        }
+    }
+
 
     // ===================== 보조(타이머/애니/이동) =====================
     void TickTimers()
@@ -513,41 +601,6 @@ public class PlayerController : MonoBehaviour
         transform.localScale = s;
     }
 
-    void ApplyMovement(float dt)
-    {
-        // === CHANGE: 벽점프 락 중엔 x 가속/감속을 건너뜀 ===
-        // if (Current == ActionState.WallJump && wallLock > 0f)
-        // {
-        //     // y만 자연 낙하/제한 처리
-        //     rb.linearVelocityY = maxFallSpeed;
-        //     return; // ← 수평은 유지
-        // }
-
-        if (Current == ActionState.Dash || Current == ActionState.Attack) return;
-
-        // 벽슬라이드 속도제한
-        if (Current == ActionState.WallSlide && rb.linearVelocityY < wallSlideMaxSpeed)
-            rb.linearVelocityY = wallSlideMaxSpeed;
-
-        bool lockH = wallLock > 0f || Current == ActionState.Attack;
-
-        float targetX = 0f;
-        //공중에서 속도 조정
-        if (!lockH)
-        {
-            float controlRate = (isAir && !isWall) ? airControl : 1f;
-            targetX = inputX * moveSpeed * controlRate;
-        }
-        else
-        {
-            // === CHANGE: 락 중엔 x를 건드리지 않게 현재값을 목표로 둠 ===
-            targetX = rb.linearVelocityX;
-        }
-
-        float rate = (Mathf.Abs(targetX) > 0.01f) ? accel : deccel;
-        rb.linearVelocityX = Mathf.MoveTowards(rb.linearVelocityX, targetX, rate * dt);
-
-    }
 
 
     void ClampFall()
@@ -565,15 +618,16 @@ public class PlayerController : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        // Ground ray
+        // Ground Check Ray
         Gizmos.color = Color.green;
-        Vector2 gOrigin = groundCheck ? (Vector2)groundCheck.position : (Vector2)transform.position + Vector2.down * 0.5f;
-        Gizmos.DrawLine(gOrigin, gOrigin + Vector2.down * groundDist);
+        Gizmos.DrawLine(transform.position, transform.position - transform.up * groundCheckDistance);
 
-        // Wall box
+        // Wall Check Ray
         Gizmos.color = Color.cyan;
-        int dir = Application.isPlaying ? faceDir : 1;
-        Vector2 wCenter = wallCheck ? (Vector2)wallCheck.position : (Vector2)transform.position + new Vector2(dir * 0.4f, 0f);
-        Gizmos.DrawWireCube(wCenter, wallBox);
+        Gizmos.DrawLine(transform.position, transform.position + transform.right * wallCheckDistance * faceDir);
+
+        // Attack 
+        if(attackPoint)
+            Gizmos.DrawWireSphere(attackPoint.position,attackRadius);
     }
 }

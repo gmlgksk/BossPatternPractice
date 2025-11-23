@@ -40,6 +40,11 @@ public class Laser : MonoBehaviour
         yield return StartCoroutine(LaserEndFor(laserEndDuration));
     }
 
+    public void LaserDisable()
+    {
+        laserObject.SetActive(false);
+    }
+
     public IEnumerator LaserAimeFor(float laserAimeDuration)
     {
         

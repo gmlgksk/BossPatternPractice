@@ -20,12 +20,17 @@ public class HP : MonoBehaviour
     [SerializeField] private float launchForce;
     [SerializeField] private Vector2 launchDir = new(1f,0f);
 
-    private void Start()
+    private void Awake()
     {
+        tc = GetComponent<TimeController>();
+        rb = GetComponent<Rigidbody2D>();
+        sr = GetComponent<SpriteRenderer>();
+        originalColor = sr.color;
         hp = maxHp;
         pm = GetComponent<PatternManager>();
         anim = GetComponent<Animator>();
     }
+    
     void Update()
     {
 
@@ -34,7 +39,7 @@ public class HP : MonoBehaviour
     {
         if (!other.CompareTag(DamegedableTag)) return;
 
-        StartDameged();
+        TakeDamage();
     }
 
     public void Init()
@@ -46,21 +51,29 @@ public class HP : MonoBehaviour
     }
 
 
-    public void StartDameged()
+    public void TakeDamage()
     {
         if (isDead == true || isDamegedable == false) return;
 
-        StartCoroutine(DamagedCoroutine());
-    }
-    public IEnumerator DamagedCoroutine()
-    {
         if (hp >= 1) hp -= 1;
+        if (hp == 0) Dead();
+
         isDamegedable = false;
         Debug.Log($"피격! 현재체력={hp}");
-        if (hp == 0) Dead();
-        yield return StartCoroutine(BlinkCoroutine());
 
+        StartCoroutine(DamagedEffectCoroutine());
+    }
+    public IEnumerator DamagedEffectCoroutine()
+    {
+        for (int i = 0; i < blinkCount; i++)
+        {
+            sr.color = Color.red;                    // 하얀색으로 변경
+            yield return new WaitForSeconds(blinkDuration / 2);
+            sr.color = originalColor;                  // 원래 색상으로 복귀
+            yield return new WaitForSeconds(blinkDuration / 2);
+        }
         isDamegedable = true;
+
     }
 
     public void Dead()
@@ -69,6 +82,8 @@ public class HP : MonoBehaviour
         isDamegedable = false;
         Debug.Log("죽었다!");
 
+        pm.StopPattern();
+        rb.MoveRotation(0f);
         anim.SetTrigger("dead");
         pm.StopPattern_Distance();
         tc.SlowTimeEffectSmooth();
@@ -90,26 +105,5 @@ public class HP : MonoBehaviour
 
     private SpriteRenderer sr;
     private Color originalColor;
-    private void Awake()
-    {
-        tc = GetComponent<TimeController>();
-        rb = GetComponent<Rigidbody2D>();
-        sr = GetComponent<SpriteRenderer>();
-        originalColor = sr.color;
-    }
-    public void StartBlink()
-    {
-        StartCoroutine(BlinkCoroutine());
-    }
     
-    private IEnumerator BlinkCoroutine()
-    {
-        for (int i = 0; i < blinkCount; i++)
-        {
-            sr.color = Color.red;                    // 하얀색으로 변경
-            yield return new WaitForSeconds(blinkDuration / 2);
-            sr.color = originalColor;                  // 원래 색상으로 복귀
-            yield return new WaitForSeconds(blinkDuration / 2);
-        }
-    }
 }
