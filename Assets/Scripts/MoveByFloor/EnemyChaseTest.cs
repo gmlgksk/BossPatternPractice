@@ -12,12 +12,11 @@ public class EnemyChaseSimple : MonoBehaviour
     [Header("Layer")]
     public LayerMask platformLayer;      // 플랫폼 레이어(한 개)
     public LayerMask platformIgnoreLayer;
-    int originlayer;
-    int ignoreLayer;
 
     [Header("Floors")]
     [Tooltip("플레이어 초기화에 사용. 각 층의 Y값 (index 0=1층, 1=2층, 2=3층)")]
-    public float[] floorY = new float[3];
+    public int Floor_Number;
+    public float[] floorY;
     public Transform[] platforms;
 
     [Header("Chase")]
@@ -47,6 +46,7 @@ public class EnemyChaseSimple : MonoBehaviour
         stairs[1] = stairs_1; 
         stairs[2] = stairs_2;
 
+        floorY = new float[Floor_Number];
         currentFloor = FloorCheck(transform);
     }
     int FloorCheck(Transform trans)
