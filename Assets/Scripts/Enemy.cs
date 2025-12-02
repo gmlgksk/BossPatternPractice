@@ -1,36 +1,52 @@
 using System;
-using Unity.VisualScripting;
+using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 public class Enemy : Entity
 {
-    private enum State {Patrol, Warning, Chase}
-    [Header("State detail")]
+    private enum State {Patrol, Warning, Chase, Attack}
+    [Header("===== Additional Details! =====")]
+    [Header("== State detail ==")]
     [SerializeField] State currentState;
     [SerializeField] bool lookedTarget;
     [SerializeField] float lookingTimer = 0f;
     [SerializeField] float chasingTimer = 0f;
     [SerializeField] float identityTime = 1f;
     [SerializeField] float chaseEndTime = 1f;
-    [Header("Indecator")]
-    public String state;
+
+    [Header("== Indecator ==")]
+    public String totalState;
+    public String entityState;
     public String destinationLog;
-    [Header("Layer")]
+
+
+    [Header("== Layer ==")]
     public LayerMask platformLayer;      // 플랫폼 레이어(한 개)
     public LayerMask platformIgnoreLayer;
 
-    [Header("Floors")]
+    [Header("== Floors ==")]
     [Tooltip("플레이어 초기화에 사용. 각 층의 Y값 (index 0=1층, 1=2층, 2=3층)")]
     public int Floor_Number;
     public float[] floorY;
     public Transform[] platforms;
 
-    [Header("Chase")]
+    [Header("== Patrol ==")]
+    [SerializeField] private Transform[] patrolPoints;
+    [SerializeField] private int patrolIndex;
+    // [SerializeField] private Transform sightPoint;
+    [SerializeField] private Vector2 sightDirection;
+    [SerializeField] private float sightDistance;
+    [SerializeField] private float spreadAngle;
+
+    [Header("== Attack ==")]
+    public GameObject ATK_Range;
+    private Collider2D ATK_Col;
+
+    [Header("== Chase ==")]
     public float chaseSpeed = 6f;
     public Transform target;
 
-    [Header("Stairs")]
+    [Header("== Stairs ==")]
     // stairs[floor][i] : floor층 계단 포인트들
     public Transform[][] stairs = new Transform[3][];
     public Transform[] stairs_0;
@@ -39,6 +55,10 @@ public class Enemy : Entity
     private int currentFloor;   // 0,1,2
     private int targetFloor;    // 0,1,2
     private int goToUpDown;
+    
+    public TMP_Text stateText; 
+
+
 
 
 
@@ -55,15 +75,25 @@ public class Enemy : Entity
         stairs[1] = stairs_1; 
         stairs[2] = stairs_2;
 
-        floorY = new float[Floor_Number];
+        // floorY = new float[Floor_Number];
         currentFloor = FloorCheck(transform);
+
+        // ATK_Range = GetComponentInChildren<GameObject>();
+        // if (ATK_Range!=null)
+        // ATK_Col=ATK_Range.GetComponent<Collider2D>();
+        stateText = GetComponentInChildren<TMP_Text>();
     }
     protected override void Update()
     {
         base.Update();
         Handle_State();
-        state = $"curFloor:{currentFloor},targetFloor:{targetFloor},updown{goToUpDown}";
-        targetFloor = FloorCheck(target);
+        HandleSight();
+        Handle_MovementByState(currentState);
+        totalState = $"curFloor:{currentFloor},targetFloor:{targetFloor},updown{goToUpDown}";
+        if(target)
+            targetFloor = FloorCheck(target);
+
+        stateText.text = entityState;
     }
 
 
@@ -76,19 +106,25 @@ public class Enemy : Entity
 
     // ========== 핵심함수들 ==========
     public void Handle_State()
-    {// 순찰 -> 경계 -> 추적 -> 경계 -> 순찰
+    {
+        // [순찰] -> [경계] -> [추적]&[공격] -> [경계] -> [순찰]
+        // 공격범위에 들어오면 무조건 [공격]
+        if (OnAttackRange() && target) currentState = State.Attack;
+        
         switch (currentState)
         {
-            // 순찰 상태
+            // ===== 순찰 상태
             case State.Patrol:
+                entityState = "patrol";
                 if (lookedTarget)
                 {
                     currentState = State.Warning;
                     break;
                 }
                 break;
-            // 경계 상태
+            // ===== 경계 상태
             case State.Warning:
+                entityState = "warning";
                 chasingTimer = 0;
                 if (lookedTarget)
                     lookingTimer += Time.deltaTime;
@@ -103,36 +139,57 @@ public class Enemy : Entity
                     currentState = State.Patrol;
 
                 break;
-            // 추적 상태
+            // ===== 추적 상태
             case State.Chase:
+                entityState = "chase";
                 lookingTimer = 0f;
                 chasingTimer += Time.deltaTime;
 
+                if (lookedTarget) chasingTimer=0;
                 if (chasingTimer > chaseEndTime)
-                    currentState = State.Chase;
-
+                    currentState = State.Warning;
                 break;
+            // ===== 공격상태
+            case State.Attack:
+                entityState = "attack";
+                if (OnAttackRange()) currentState = State.Chase;
+                break;
+
             default:
                 break;
         }   
     }
     private void Handle_MovementByState(State state)
     {
-        if(state== State.Patrol)
+        if(state == State.Patrol)
             Patrol();
-        else if(state== State.Warning)
+        else if(state == State.Warning)
             Warning();
-        else if(state== State.Chase)
+        else if(state == State.Chase)
             Chase();
             
     }
     public void Patrol()
     {
-        
+        if (patrolPoints == null || patrolPoints.Length == 0)
+            return;
+
+        // 현재 목표 지점
+        Vector2 targetPos = patrolPoints[patrolIndex].position;
+
+        MoveTo(targetPos.x,moveSpeed);
+
+        // 도착했으면 다음 포인트로 인덱스 변경
+        if (Vector2.Distance(transform.position, targetPos) < 0.1f)
+        {
+            patrolIndex++;
+            if (patrolIndex >= patrolPoints.Length)
+                patrolIndex = 0; // 다시 처음으로
+        }
     }
     public void Warning()
     {
-        
+        Debug.Log("의심중");
     }
     public void Chase()
     {
@@ -161,10 +218,92 @@ public class Enemy : Entity
             destinationLog=$"upPoint, x:{destination.x}";
         }
 
-        MoveTo(destination.x);
+        MoveTo(destination.x,chaseSpeed);
 
         if (Vector2.Distance(transform.position,destination) < 0.1f)
             setCurrentFloor(goToUpDown);
+    }
+    public void Attack()
+    {
+        target.GetComponent<HP_System>().Health_Reduce();
+        new WaitForSeconds(1f);
+    }
+
+    public bool OnAttackRange()
+    {
+        if(Physics2D.OverlapCircle(sightPoint.position,attackRadius,whatIsTarget))
+            return true;
+        return false;
+    }
+
+    private void HandleSight()
+    {
+        Vector2 baseDir = sightDirection.normalized;
+
+        // 3개 방향 계산
+        Vector2 dirCenter = baseDir;
+        Vector2 dirUp = RotateVector(baseDir, spreadAngle);   // 기준 +각도
+        Vector2 dirDown = RotateVector(baseDir, -spreadAngle);   // 기준 -각도
+
+        // 3개의 결과를 각각 받고
+        bool hitCenter = SightRaycast(dirCenter, "Center");
+        bool hitUp     = SightRaycast(dirUp,     "Up");
+        bool hitDown   = SightRaycast(dirDown,   "Down");
+
+        // 하나라도 true면 lookedTarget = true
+        lookedTarget = hitCenter || hitUp || hitDown;
+
+        // // 🔹 "놓친 시점" 체크 (원하면 사용)
+        // if (!lookedTarget && lastLookedTarget)
+        // {
+        //     Debug.Log("👀 타겟을 이제 막 놓친 순간!");
+        //     // 여기서 '놓쳤을 때' 로직 처리 (탐색 모션, 애니메이션, 상태 변경 등)
+        // }
+
+        // // 다음 프레임 대비해서 저장
+        // lastLookedTarget = lookedTarget;
+    }
+
+    private bool SightRaycast(Vector2 dir, string debugTag = "")
+    {
+        RaycastHit2D hit = Physics2D.Raycast(
+            sightPoint.position,
+            dir * faceDir,
+            sightDistance,
+            whatIsTarget          // 👈 Player + Wall 레이어만 맞음
+        );
+
+        if (hit.collider == null)
+        {
+            Debug.Log($"[{debugTag}] 아무것도 안 맞음");
+            return false;
+        }
+
+        int hitLayer = hit.collider.gameObject.layer;
+
+        // 1️⃣ 벽 레이어 먼저 체크 → 시야 차단
+        if (hitLayer != whatIsTarget)
+        {
+            Debug.Log($"[{debugTag}] 벽에 막힘 (레이 중단)");
+            return false;
+        }
+
+        // 2️⃣ 플레이어 레이어면 → 타겟 발견
+        if (hitLayer == whatIsTarget)
+        {
+            target = hit.collider.transform;
+            lookedTarget = true;
+            Debug.Log($"[{debugTag}] 플레이어 발견!");
+            return true;
+        }
+        return false;
+    }
+
+
+    private Vector2 RotateVector(Vector2 v, float degrees)
+    {
+        // 2D 에서는 z축 회전만 쓰니까 이렇게 처리
+        return (Vector2)(Quaternion.Euler(0f, 0f, degrees) * v);
     }
 
 
@@ -173,20 +312,61 @@ public class Enemy : Entity
 
 
 
-
     // ========== 보조함수들 ==========
-    public int FloorCheck(Transform trans)
-	{
-		float posY = trans.position.y;
-		if (floorY[2] < posY) return 2;
-		if (floorY[1] < posY) return 1;
-		if (floorY[0] < posY) return 0;
+    private void OnDrawGizmos()
+    {
+        if (sightPoint == null) return;
+
+        Vector2 baseDir = sightDirection.normalized;
+        baseDir.x *= faceDir;
+        Vector2 dirCenter = baseDir;
+        Vector2 dirUp     = RotateVector(baseDir,  spreadAngle);
+        Vector2 dirDown   = RotateVector(baseDir, -spreadAngle);
+
+        Gizmos.color = Color.red;
+
+        Gizmos.DrawLine(
+            sightPoint.position,
+            sightPoint.position + (Vector3)dirCenter * sightDistance
+        );
+        Gizmos.DrawLine(
+            sightPoint.position,
+            sightPoint.position + (Vector3)dirUp * sightDistance
+        );
+        Gizmos.DrawLine(
+            sightPoint.position,
+            sightPoint.position + (Vector3)dirDown * sightDistance
+        );
+    }
+
+    int FloorCheck(Transform trans)
+    {
+        if (floorY == null || floorY.Length == 0)
+        {
+            Debug.LogError("floorY가 설정되지 않았습니다.");
+            return 0;
+        }
+
+        float posY = trans.position.y;
+
+        // 높은 층부터 내려가며 체크 (마지막 인덱스가 가장 높은 층이라고 가정)
+        for (int i = floorY.Length - 1; i >= 0; i--)
+        {
+            if (posY > floorY[i])
+                return i;
+        }
+
         return 0;
-	}
+    }
+
+    public void AttackRangeCheck()
+    {
+        
+    }
 
     public void DrawSight()
     {
-        Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(attackPoint.position, attackRadius, whatIsTarget);
+        Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(sightPoint.position, attackRadius, whatIsTarget);
     }
     void setCurrentFloor(int goToUpDown)
 	{
@@ -251,4 +431,9 @@ public class Enemy : Entity
 				Physics2D.IgnoreCollision(col, platformCol, true);
 		}
 	}
+    protected override void Flip()
+    {
+        base.Flip();
+        stateText.rectTransform.Rotate(0,180,0);
+    }
 }

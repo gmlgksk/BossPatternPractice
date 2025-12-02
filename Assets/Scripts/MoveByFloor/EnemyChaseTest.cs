@@ -46,17 +46,29 @@ public class EnemyChaseSimple : MonoBehaviour
         stairs[1] = stairs_1; 
         stairs[2] = stairs_2;
 
-        floorY = new float[Floor_Number];
         currentFloor = FloorCheck(transform);
     }
     int FloorCheck(Transform trans)
-	{
-		float posY = trans.position.y;
-		if (floorY[2] < posY) return 2;
-		if (floorY[1] < posY) return 1;
-		if (floorY[0] < posY) return 0;
+    {
+        if (floorY == null || floorY.Length == 0)
+        {
+            Debug.LogError("floorY가 설정되지 않았습니다.");
+            return 0;
+        }
+
+        float posY = trans.position.y;
+
+        // 높은 층부터 내려가며 체크 (마지막 인덱스가 가장 높은 층이라고 가정)
+        for (int i = floorY.Length - 1; i >= 0; i--)
+        {
+            if (posY > floorY[i])
+                return i;
+        }
+
         return 0;
-	}
+    }
+
+
 
     void Update()
     {
