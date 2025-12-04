@@ -548,8 +548,8 @@ public class PlayerController : MonoBehaviour
         
         foreach (Collider2D enemy in enemyColliders)
         {
-            HP entityTarget = enemy.GetComponent<HP>();
-            entityTarget.TakeDamage();
+            HP_System entityTarget = enemy.GetComponent<HP_System>();
+            entityTarget.Health_Reduce();
         }
     }
 
@@ -612,7 +612,7 @@ public class PlayerController : MonoBehaviour
     public void Die()
     {
         Enter(ActionState.Dead);
-        anim.SetBool("Dead", true);
+        anim.SetBool("isDead", true);
         rb.linearVelocity = Vector2.zero;
     }
 

@@ -5,58 +5,62 @@ using UnityEngine;
 public class Enemy : Entity
 {
     private enum State {Patrol, Warning, Chase, Attack}
-    [Header("===== Additional Details! =====")]
-    [Header("== State detail ==")]
-    [SerializeField] State currentState;
-    [SerializeField] bool lookedTarget;
-    [SerializeField] float lookingTimer = 0f;
-    [SerializeField] float chasingTimer = 0f;
-    [SerializeField] float identityTime = 1f;
-    [SerializeField] float chaseEndTime = 1f;
+    [Header("===== Enemy Details! =====")]
 
-    [Header("== Indecator ==")]
-    public String totalState;
-    public String entityState;
-    public String destinationLog;
+    [Header("[ Indecator ]")]
+    public String           totalState;
+    public String           entityState;
+    public String           destinationLog;
 
 
-    [Header("== Layer ==")]
-    public LayerMask platformLayer;      // 플랫폼 레이어(한 개)
-    public LayerMask platformIgnoreLayer;
+    [Header("[ Layer ]")]
+    public LayerMask        platformLayer;      // 플랫폼 레이어(한 개)
+    public LayerMask        platformIgnoreLayer;
 
-    [Header("== Floors ==")]
-    [Tooltip("플레이어 초기화에 사용. 각 층의 Y값 (index 0=1층, 1=2층, 2=3층)")]
-    public int Floor_Number;
-    public float[] floorY;
-    public Transform[] platforms;
+    [Header("[ Floors ]")]
+    public int              Floor_Number;
+    public float[]          floorY;
+    public Transform[]      platforms;
 
-    [Header("== Patrol ==")]
-    [SerializeField] private Transform[] patrolPoints;
-    [SerializeField] private int patrolIndex;
-    // [SerializeField] private Transform sightPoint;
-    [SerializeField] private Vector2 sightDirection;
-    [SerializeField] private float sightDistance;
-    [SerializeField] private float spreadAngle;
+    [Header("[ Sight Details ]")]
+    private State  currentState;
+    public bool             lookedTarget;
+    public float            lookingTimer = 0f;
+    public float            chasingTimer = 0f;
+    public float            identityTime = 1f;
+    public float            chaseEndTime = 1f;
+    public LayerMask        whatIsTarget;
+    public LayerMask        whatIsBlock;
+    public Transform        sightPoint;
 
-    [Header("== Attack ==")]
-    public GameObject ATK_Range;
-    private Collider2D ATK_Col;
+    [Header("[ Patrol ]")]
+    [SerializeField] private Transform[]    patrolPoints;
+    [SerializeField] private int            patrolIndex;
+    [SerializeField] private Vector2        sightDirection;
+    [SerializeField] private float          sightDistance;
+    [SerializeField] private float          spreadAngle;
 
-    [Header("== Chase ==")]
-    public float chaseSpeed = 6f;
-    public Transform target;
+    [Header("[ Attack ]")]
+    public GameObject       ATK_Range;
+    public Transform        attackPoint;
+    public float            attackRadius;
+    // private Collider2D ATK_Col;
 
-    [Header("== Stairs ==")]
+    [Header("[ Chase ]")]
+    public float            chaseSpeed = 6f;
+    public Transform        target;
+
+    [Header("[ Stairs ]")]
     // stairs[floor][i] : floor층 계단 포인트들
-    public Transform[][] stairs = new Transform[3][];
-    public Transform[] stairs_0;
-    public Transform[] stairs_1;
-    public Transform[] stairs_2; 
-    private int currentFloor;   // 0,1,2
-    private int targetFloor;    // 0,1,2
-    private int goToUpDown;
+    public Transform[][]    stairs = new Transform[3][];
+    public Transform[]      stairs_0;
+    public Transform[]      stairs_1;
+    public Transform[]      stairs_2; 
+    private int             currentFloor;   // 0,1,2
+    private int             targetFloor;    // 0,1,2
+    private int             goToUpDown;
     
-    public TMP_Text stateText; 
+    public TMP_Text         stateText; 
 
 
 
@@ -81,10 +85,13 @@ public class Enemy : Entity
         // ATK_Range = GetComponentInChildren<GameObject>();
         // if (ATK_Range!=null)
         // ATK_Col=ATK_Range.GetComponent<Collider2D>();
-        stateText = GetComponentInChildren<TMP_Text>();
+
+        stateText   = GetComponentInChildren<TMP_Text>();
+        anim        = GetComponentInChildren<Animator>();
     }
     protected override void Update()
     {
+        if(isDie) return;
         base.Update();
         Handle_State();
         HandleSight();
@@ -94,6 +101,7 @@ public class Enemy : Entity
             targetFloor = FloorCheck(target);
 
         stateText.text = entityState;
+        anim.SetFloat("velocityX",rb.linearVelocityX);
     }
 
 
@@ -149,10 +157,9 @@ public class Enemy : Entity
                 if (chasingTimer > chaseEndTime)
                     currentState = State.Warning;
                 break;
-            // ===== 공격상태
+            // ===== 공격상태 /상태해제는 애니메이터에서
             case State.Attack:
                 entityState = "attack";
-                if (OnAttackRange()) currentState = State.Chase;
                 break;
 
             default:
@@ -161,13 +168,10 @@ public class Enemy : Entity
     }
     private void Handle_MovementByState(State state)
     {
-        if(state == State.Patrol)
-            Patrol();
-        else if(state == State.Warning)
-            Warning();
-        else if(state == State.Chase)
-            Chase();
-            
+        if      (state == State.Patrol)  Patrol();
+        else if (state == State.Warning) Warning();
+        else if (state == State.Chase)   Chase();
+        else if (state == State.Attack)  Attack();
     }
     public void Patrol()
     {
@@ -206,14 +210,14 @@ public class Enemy : Entity
         {
             goToUpDown = -1;
             
-            destination.x = FindNearestStair(stairs,currentFloor-1).position.x;
+            destination.x = FindNearestStair(stairs,currentFloor-1,faceDir).position.x;
             Debug.Log("chech Down");
             destinationLog=$"downPoint, x:{destination.x}";
         }
         if (currentFloor < targetFloor)
         {
             goToUpDown = 1;
-            destination.x = FindNearestStair(stairs,currentFloor).position.x;
+            destination.x = FindNearestStair(stairs,currentFloor,faceDir).position.x;
             Debug.Log("chech Up");
             destinationLog=$"upPoint, x:{destination.x}";
         }
@@ -225,13 +229,42 @@ public class Enemy : Entity
     }
     public void Attack()
     {
-        target.GetComponent<HP_System>().Health_Reduce();
-        new WaitForSeconds(1f);
+        rb.linearVelocity = Vector2.zero;
+        anim.SetTrigger("attack");
+        Debug.Log("공격!");
+    }
+    public override void Attack_Perform()
+    {
+        Collider2D targetCollider = Physics2D.OverlapCircle(attackPoint.position, attackRadius, whatIsTarget);
+        // 현재 플레이어는 엔티티에 기반하지 않고 독립적인 플레이어컨트롤러를 사용함
+        
+        // if(targetCollider.GetComponent<HP_System>()!=null)
+        // {
+        //     HP_System targetHP = targetCollider.GetComponent<HP_System>();
+        //     targetHP.Health_Reduce();
+        // }
+        // else 
+        if (targetCollider.GetComponent<PlayerController>())
+        {
+            PlayerController target = targetCollider.GetComponent<PlayerController>();
+            target.Die();
+        }
     }
 
+    public override void Attack_End()
+    {
+        currentState = State.Chase;
+    }
+
+
+
+
+
+
+    // ========== 보조함수들 ==========
     public bool OnAttackRange()
     {
-        if(Physics2D.OverlapCircle(sightPoint.position,attackRadius,whatIsTarget))
+        if(Physics2D.OverlapCircle(attackPoint.position,attackRadius,whatIsTarget))
             return true;
         return false;
     }
@@ -266,11 +299,13 @@ public class Enemy : Entity
 
     private bool SightRaycast(Vector2 dir, string debugTag = "")
     {
+        int mask = whatIsTarget | whatIsBlock;
+
         RaycastHit2D hit = Physics2D.Raycast(
             sightPoint.position,
             dir * faceDir,
             sightDistance,
-            whatIsTarget          // 👈 Player + Wall 레이어만 맞음
+            mask
         );
 
         if (hit.collider == null)
@@ -280,22 +315,31 @@ public class Enemy : Entity
         }
 
         int hitLayer = hit.collider.gameObject.layer;
+        int hitBit   = 1 << hitLayer;
 
-        // 1️⃣ 벽 레이어 먼저 체크 → 시야 차단
-        if (hitLayer != whatIsTarget)
+        bool isBlock  = (whatIsBlock  & hitBit) != 0;
+        bool isTarget = (whatIsTarget & hitBit) != 0;
+
+        Debug.Log($"[{debugTag}] 맞은 것: {hit.collider.name}, 레이어={LayerMask.LayerToName(hitLayer)}");
+
+        // 1️⃣ 벽에 맞았으면 시야 차단
+        if (isBlock)
         {
             Debug.Log($"[{debugTag}] 벽에 막힘 (레이 중단)");
             return false;
         }
 
-        // 2️⃣ 플레이어 레이어면 → 타겟 발견
-        if (hitLayer == whatIsTarget)
+        // 2️⃣ 플레이어에 맞았으면 타겟 발견
+        if (isTarget)
         {
             target = hit.collider.transform;
             lookedTarget = true;
             Debug.Log($"[{debugTag}] 플레이어 발견!");
             return true;
         }
+
+        // 3️⃣ 둘 다 아니면 그냥 무시
+        Debug.Log($"[{debugTag}] 타겟/벽이 아닌 다른 레이어 맞음");
         return false;
     }
 
@@ -305,38 +349,35 @@ public class Enemy : Entity
         // 2D 에서는 z축 회전만 쓰니까 이렇게 처리
         return (Vector2)(Quaternion.Euler(0f, 0f, degrees) * v);
     }
-
-
-
-
-
-
-
-    // ========== 보조함수들 ==========
     private void OnDrawGizmos()
     {
-        if (sightPoint == null) return;
+        if (sightPoint != null)
+        {
+            Gizmos.color = Color.red;
+            Vector2 baseDir = sightDirection.normalized;
+            baseDir.x *= faceDir;
+            Vector2 dirCenter = baseDir;
+            Vector2 dirUp     = RotateVector(baseDir,  spreadAngle);
+            Vector2 dirDown   = RotateVector(baseDir, -spreadAngle);
+            Gizmos.DrawLine(
+                sightPoint.position,
+                sightPoint.position + (Vector3)dirCenter * sightDistance
+            );
+            Gizmos.DrawLine(
+                sightPoint.position,
+                sightPoint.position + (Vector3)dirUp * sightDistance
+            );
+            Gizmos.DrawLine(
+                sightPoint.position,
+                sightPoint.position + (Vector3)dirDown * sightDistance
+            );
+        }
+        if (sightPoint)
+        {
+            Gizmos.color = Color.orange;
+            Gizmos.DrawWireSphere(attackPoint.position,attackRadius);
+        }
 
-        Vector2 baseDir = sightDirection.normalized;
-        baseDir.x *= faceDir;
-        Vector2 dirCenter = baseDir;
-        Vector2 dirUp     = RotateVector(baseDir,  spreadAngle);
-        Vector2 dirDown   = RotateVector(baseDir, -spreadAngle);
-
-        Gizmos.color = Color.red;
-
-        Gizmos.DrawLine(
-            sightPoint.position,
-            sightPoint.position + (Vector3)dirCenter * sightDistance
-        );
-        Gizmos.DrawLine(
-            sightPoint.position,
-            sightPoint.position + (Vector3)dirUp * sightDistance
-        );
-        Gizmos.DrawLine(
-            sightPoint.position,
-            sightPoint.position + (Vector3)dirDown * sightDistance
-        );
     }
 
     int FloorCheck(Transform trans)
@@ -364,10 +405,7 @@ public class Enemy : Entity
         
     }
 
-    public void DrawSight()
-    {
-        Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(sightPoint.position, attackRadius, whatIsTarget);
-    }
+    
     void setCurrentFloor(int goToUpDown)
 	{
 		if (goToUpDown == 0)
@@ -386,7 +424,7 @@ public class Enemy : Entity
         PlatformIgnore(currentFloor);
 	}
     // ====== 계단 포인트 찾기 ======
-    Transform FindNearestStair(Transform[][] points, int floor)
+    Transform FindNearestStair(Transform[][] points, int floor,int direction)
     {
         Debug.Log("");
         if (points == null) {
@@ -400,23 +438,40 @@ public class Enemy : Entity
         Transform[] list = points[floor];
         if (list == null || list.Length == 0) return null;
 
-        Transform best = null;
-        float bestSqr = float.MaxValue;
+        Transform best      = null;
+        float bestSqr       = float.MaxValue;
+        Transform semiBest  = null;
+        float semiBestSqr   = float.MaxValue;
 
         foreach (var t in list)
         {
             if (!t) continue;
 
             float dx  = t.position.x - rb.position.x;
+            // dx가 양수면 우측, 바라보고 있는 방향 우선
+            
+            
             float sqr = dx * dx;
 
             if (sqr < bestSqr)
             {
-                bestSqr = sqr;
-                best    = t;
+                if ( direction * dx > 0)
+                {
+                    bestSqr = sqr;
+                    best    = t;
+                }
+                else
+                {
+                    semiBestSqr = sqr;
+                    semiBest    = t;
+                }
             }
+
         }
-        return best;
+        if(best !=null)
+            return best;
+        else
+            return semiBest;
     }
     void PlatformIgnore(int currentFloor)
 	{

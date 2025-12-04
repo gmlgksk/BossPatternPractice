@@ -14,22 +14,19 @@ public class Entity : MonoBehaviour
 
     [Header("Chracter Option")]
     [SerializeField] protected int faceDir = 1;
-    
-    [Header("Attack Option")]
-    [SerializeField] protected Transform sightPoint;
-    [SerializeField] protected float attackRadius;
-    [SerializeField] protected LayerMask whatIsTarget;
+    public bool isDie=false;
 
     protected virtual void Awake()
     {
         faceDir = 1;
         rb      = GetComponent<Rigidbody2D>();
         col     = GetComponent<Collider2D>();
-        anim    = GetComponent<Animator>();
+        anim    = GetComponentInChildren<Animator>();
         hp      = GetComponent<HP_System>();
     }
     protected virtual void Update()
     {
+        if(isDie) return;
         HandleAnimation();
         Handle_Flip();
     }
@@ -47,11 +44,11 @@ public class Entity : MonoBehaviour
         // anim.SetFloat("velocityX",rb.linearVelocityX); // idle/move
         // anim.SetFloat("velocityY",rb.linearVelocityY); // jump/fall
     }
-    public void Attack_Start()
+    public virtual void Attack_Start()
     {
         // anim.SetTrigger("attack");
     }
-    public void Attack_Perform()
+    public virtual void Attack_Perform()
     {
         // Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(sightPoint.position, attackRadius, whatIsTarget);
         
@@ -61,9 +58,17 @@ public class Entity : MonoBehaviour
         //     entityTarget.TakeDamage();
         // }
     }
+    public virtual void Attack_End()
+    {
+        
+    }
     public void TakeDamage()
     {
         hp.Health_Reduce();
+    }
+    public void Die()
+    {
+        isDie = true;
     }
     protected virtual void Handle_Flip()
     {
