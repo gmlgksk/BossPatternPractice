@@ -235,20 +235,42 @@ public class Enemy : Entity
     }
     public override void Attack_Perform()
     {
-        Collider2D targetCollider = Physics2D.OverlapCircle(attackPoint.position, attackRadius, whatIsTarget);
-        // 현재 플레이어는 엔티티에 기반하지 않고 독립적인 플레이어컨트롤러를 사용함
-        
-        // if(targetCollider.GetComponent<HP_System>()!=null)
-        // {
-        //     HP_System targetHP = targetCollider.GetComponent<HP_System>();
-        //     targetHP.Health_Reduce();
-        // }
-        // else 
-        if (targetCollider.GetComponent<PlayerController>())
+        // 1) 공격 위치가 null이면 바로 리턴 (실수 방지용)
+        if (attackPoint == null)
         {
-            PlayerController target = targetCollider.GetComponent<PlayerController>();
-            target.Die();
+            Debug.LogError("[Enemy] attackPoint 가 설정되지 않았습니다.", this);
+            return;
         }
+
+        // 2) 타겟 탐색
+        Collider2D targetCollider = Physics2D.OverlapCircle(
+            attackPoint.position,
+            attackRadius,
+            whatIsTarget
+        );
+
+        // 3) 맞은 대상이 없으면 종료
+        if (targetCollider == null)
+            return;
+
+        // 4) HP_System 우선 체크
+        HP_System hp = targetCollider.GetComponent<HP_System>();
+        if (hp != null)
+        {
+            hp.Health_Reduce();
+            return;
+        }
+
+        // 5) 그게 아니면 PlayerController 인지 체크
+        PlayerController player = targetCollider.GetComponent<PlayerController>();
+        if (player != null)
+        {
+            player.Die();
+            return;
+        }
+
+        // 6) 둘 다 아니면 로그만 찍어보기 (선택)
+        Debug.Log($"[Enemy] 공격했지만 처리 대상 없는 콜라이더: {targetCollider.name}", targetCollider);
     }
 
     public override void Attack_End()

@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CapsuleCollider2D))]
 [RequireComponent(typeof(PlayerInput))]
 [RequireComponent(typeof(Animator))]
-public class PlayerController : MonoBehaviour
+public class PlayerController : Entity
 {
     [SerializeField] private string debugSummary;
     // ===== 대전제 (불리언) =====
@@ -20,8 +20,7 @@ public class PlayerController : MonoBehaviour
     public ActionState Current { get; private set; } = ActionState.Idle;
 
     // ===== 컴포넌트 =====
-    Rigidbody2D rb;
-    Animator anim;
+
 
 
     // ===== 기본 파라미터 =====
@@ -30,7 +29,6 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float animSpeed = 1f;
     
     [Header("Move")]
-    [SerializeField] private float moveSpeed = 8f;
     [SerializeField] private float accel = 60f;
     [SerializeField] private float deccel = 70f;
     [SerializeField] private float airControl = 0.8f;
@@ -63,7 +61,6 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float wallCheckDistance = 1f;
 
     [Header("내부 상태 보조")]
-    [SerializeField] private int faceDir = 1;     // 1 오른쪽, -1 왼쪽
     [SerializeField] private float inputX;        // 연속 입력
     [SerializeField] private float rawX;          // 원시 입력
     [SerializeField] private int jumpCount;
@@ -96,14 +93,45 @@ public class PlayerController : MonoBehaviour
     const float eps = 0.01f;
     private int lastKeyDir=0;
     private MouseDirectionFromPlayer mouseDirScript;
-    void Awake()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    protected override void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
-        anim = GetComponent<Animator>();
-        mouseDirScript=GetComponent<MouseDirectionFromPlayer>();
-        originGravity = GetComponent<Rigidbody2D>().gravityScale;
-        jumpCount = maxJumpCount;
-        attackAnim = attackObject.GetComponentInChildren<AttackAnimation>();
+        base.Awake();
+        rb              = GetComponent<Rigidbody2D>();
+        anim            = GetComponent<Animator>();
+        mouseDirScript  = GetComponent<MouseDirectionFromPlayer>();
+        originGravity   = GetComponent<Rigidbody2D>().gravityScale;
+        if (attackObject != null)
+            attackAnim = attackObject.GetComponentInChildren<AttackAnimation>();
+
+        jumpCount       = maxJumpCount;
     }
 
     // ===================== 입력 =====================
@@ -274,9 +302,40 @@ public class PlayerController : MonoBehaviour
     }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // ===================== 메인 루프 =====================
-    void Update()
-    {
+    protected override void Update() {
+        if(isDie)
+        {
+            Enter(ActionState.Dead);
+            return;
+        }
+
+        base.Update();
+
         SetMoveDir();
         anim.speed = animSpeed;
         SenseBigState();                 // 1) 대전제 판정
@@ -284,8 +343,6 @@ public class PlayerController : MonoBehaviour
         TryTransition(desired);          // 3) 현재/요구/대전제 관계 판단 → 전환
 
         TickTimers();
-
-        FlipVisual();
 
         debugSummary = $"{Current} | G:{isGround} W:{isWall} A:{isAir} | Jump:{jumpCount}";
         Debug.Log(debugSummary);
@@ -443,13 +500,19 @@ public class PlayerController : MonoBehaviour
         // 들어가며 애니/플래그/즉시동작
         switch (Current)
         {
+            case ActionState.Dead:
+                anim.SetBool("isDead", true);
+                rb.linearVelocity = Vector2.zero;
+                break;
+
             case ActionState.Attack:
+            
                 attackRemainTime = attackLimitTime;        // 잠금 시간
                 DamageTargets();
                 rb.gravityScale = originGravity/4;
                 if (mouseDirScript.MouseDirection.x>0 && faceDir == -1 ||
-                    mouseDirScript.MouseDirection.x<0 && faceDir == 1) faceDir *= -1;
-                Filp();
+                    mouseDirScript.MouseDirection.x<0 && faceDir == 1)
+                    Flip();
                 Vector2 WorldMouseDir=mouseDirScript.MouseDirection * faceDir;
                 attackObject.SetActive(true);
                 attackAnim.Play();
@@ -473,7 +536,7 @@ public class PlayerController : MonoBehaviour
             case ActionState.WallJump:
                 // 1) 벽 반대 방향을 바라보도록 뒤집기
                 faceDir *= -1;
-                Filp();
+                Flip();
                 anim.SetBool("isWall", false);
 
                 // 2) 잠깐 입력 잠그기 (수평 속도 유지용)
@@ -548,9 +611,12 @@ public class PlayerController : MonoBehaviour
         
         foreach (Collider2D enemy in enemyColliders)
         {
+            // 적 엔티티
             HP_System entityTarget = enemy.GetComponent<HP_System>();
             entityTarget.Health_Reduce();
+             // 총알, 가구
         }
+       
     }
 
 
@@ -586,20 +652,21 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
-    void FlipVisual()
+    protected override void Handle_Flip()
     {
         if (faceDir == 0) return;
-        if (Current == ActionState.Attack) return; ;
-        Filp();
+        if (Current == ActionState.Attack) return;
+        Flip();
     }
-
-    private void Filp()
+    protected override void Flip()
     {
+        // faceDir은 이미 SetMoveDir / Attack / WallJump 에서 결정했다는 가정
         var s = transform.localScale;
-        s.x = Mathf.Abs(s.x) * faceDir;
+        s.x = Mathf.Abs(s.x) * faceDir;   // 1 또는 -1
         transform.localScale = s;
     }
+
+
 
 
 
@@ -608,14 +675,7 @@ public class PlayerController : MonoBehaviour
         if (rb.linearVelocityY < maxFallSpeed) { rb.linearVelocityY = maxFallSpeed; }
     }
 
-    // 외부에서 사망 처리 예시
-    public void Die()
-    {
-        Enter(ActionState.Dead);
-        anim.SetBool("isDead", true);
-        rb.linearVelocity = Vector2.zero;
-    }
-
+    
     void OnDrawGizmosSelected()
     {
         // Ground Check Ray

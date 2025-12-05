@@ -66,7 +66,7 @@ public class Entity : MonoBehaviour
     {
         hp.Health_Reduce();
     }
-    public void Die()
+    public virtual void Die()
     {
         isDie = true;
     }
