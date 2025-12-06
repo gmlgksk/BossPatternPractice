@@ -3,10 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 // 최소 구성: 구체 콜라이더 사용
-[RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(CapsuleCollider2D))]
 [RequireComponent(typeof(PlayerInput))]
-[RequireComponent(typeof(Animator))]
 public class PlayerController : Entity
 {
     [SerializeField] private string debugSummary;
@@ -124,49 +121,59 @@ public class PlayerController : Entity
     protected override void Awake()
     {
         base.Awake();
-        rb              = GetComponent<Rigidbody2D>();
-        anim            = GetComponent<Animator>();
         mouseDirScript  = GetComponent<MouseDirectionFromPlayer>();
         originGravity   = GetComponent<Rigidbody2D>().gravityScale;
         if (attackObject != null)
             attackAnim = attackObject.GetComponentInChildren<AttackAnimation>();
 
         jumpCount       = maxJumpCount;
+    
     }
 
     // ===================== 입력 =====================
     public void OnMove(InputAction.CallbackContext ctx)
+{
+    rawX   = ctx.ReadValue<Vector2>().x;
+    inputX = Mathf.Clamp(rawX, -1f, 1f);
+    reqMove = Mathf.Abs(inputX) > eps;
+
+    var kb = Keyboard.current;
+    if (kb != null)
     {
-        
-        rawX = ctx.ReadValue<Vector2>().x;
-        inputX = Mathf.Clamp(rawX, -1f, 1f);
-        reqMove = Mathf.Abs(inputX) > eps;
+        bool leftDown   = kb.aKey.wasPressedThisFrame;
+        bool rightDown  = kb.dKey.wasPressedThisFrame;
+        bool leftUp     = kb.aKey.wasReleasedThisFrame;
+        bool rightUp    = kb.dKey.wasReleasedThisFrame;
 
-        // === 키보드 기준으로 마지막 방향 갱신 ===
-        var kb = Keyboard.current;
-        if (kb != null)
+        // ======= 여기서 "입력 변화" 체크 =======
+        bool anyNewPress = leftDown || rightDown;
+        bool anyRelease  = leftUp || rightUp;
+
+        if ((anyNewPress || anyRelease) && Current == ActionState.Move && onSlope /* && !isJumping */)
         {
-            // 이 프레임에 새로 눌린 키 기준으로 갱신
-            if (kb.aKey.wasPressedThisFrame) lastKeyDir = -1;
-            if (kb.dKey.wasPressedThisFrame) lastKeyDir = 1;
-
-            // 둘 다 누르고 있을 때도 lastKeyDir 유지
-            // 둘 중 하나만 눌려 있으면 그쪽으로 덮어써도 OK
-
-            // 둘 다 떼었으면, 움직임만 멈추고 faceDir은 마지막 방향 유지
-            if (!kb.aKey.isPressed && !kb.dKey.isPressed)
-            {
-                reqMove = false;
-                inputX = 0f;
-            }
+            // rb.linearVelocityY = 0;
         }
+        // ===================================
 
-        // 실제 바라보는 방향은 lastKeyDir로
-        if (reqMove)
+        // 이 프레임에 새로 눌린 키 기준으로 lastKeyDir 갱신
+        if (leftDown)  lastKeyDir = -1;
+        if (rightDown) lastKeyDir =  1;
+
+        // 둘 다 떼었으면, 움직임만 멈추고 faceDir은 마지막 방향 유지
+        if (!kb.aKey.isPressed && !kb.dKey.isPressed)
         {
-            faceDir = lastKeyDir;
+            reqMove = false;
+            inputX  = 0f;
         }
     }
+
+    // 실제 바라보는 방향은 lastKeyDir로
+    if (reqMove)
+    {
+        faceDir = lastKeyDir;
+    }
+}
+
     private bool prevLeftKey;
     private bool prevRightKey;
 
@@ -245,6 +252,37 @@ public class PlayerController : Entity
         anim.SetBool("isGround",isGround);
         anim.SetBool("isWall", isWall);
     }
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     void Handle_Movement()
     {
         if (Current == ActionState.Dash || Current == ActionState.Attack)
@@ -253,21 +291,127 @@ public class PlayerController : Entity
         if (Current == ActionState.WallSlide)
         {
             HandleWallSlide(Time.fixedDeltaTime);
-            return; // 벽슬라이드 중엔 아래쪽 처리(수평이동) 스킵
+            return;
         }
-        // 🔹 락 중엔 수평속도 손대지 않음 (계속 같은 속도로 날아감)
-        if (wallLock > 0f || (inputX ==0&&!isGround))   return;
-        if (Current == ActionState.WallSlide)           return;
-        if (Current == ActionState.Attack)              return;
 
-        float controlRate = (isAir && !isWall) ? airControl : 1f;
-        float targetX = inputX * moveSpeed * controlRate;
+        float dt = Time.fixedDeltaTime;
 
-        float curX = rb.linearVelocityX;
-        float rate = (Mathf.Abs(targetX) > 0.01f) ? accel : deccel;
+        if (Current == ActionState.Jump 
+            || Current == ActionState.WallJump
+            || Current == ActionState.Fall)
+        {
+            HandleAirMove(dt);   // 기존 공중 이동 함수 그대로
+            return;
+        }
 
-        rb.linearVelocityX = Mathf.MoveTowards(curX, targetX, rate * Time.fixedDeltaTime);
+        // === 여기부터는 "지면 위"에서만 적용 ===
+        CheckSlope();            // 레이로 법선 / 슬로프 여부 계산
+        HandleGroundMove(dt);
+        
     }
+
+
+    [Header("[ Air Control ]")]
+    [SerializeField] float airAccel  = 200f;
+    [SerializeField] float airDeccel = 200f;
+
+    void HandleAirMove(float dt)
+    {
+        float targetX = inputX * moveSpeed * airControl; // 공중에서 최대 속도
+        float curX    = rb.linearVelocityX;
+
+        bool hasInput = Mathf.Abs(inputX) > eps;
+        float rate    = hasInput ? airAccel : airDeccel;
+
+        float newX = Mathf.MoveTowards(curX, targetX, rate * dt);
+
+        rb.linearVelocity = new Vector2(newX, rb.linearVelocityY);
+    }
+    void HandleGroundMove(float dt)
+    {
+        float absInput = Mathf.Abs(inputX);
+
+        // === 1) 기본 접선(슬로프 방향) 계산 ===
+        Vector2 baseTangent = GetSlopeTangent(groundNormal); // (지면 기준 오른쪽 향하는 벡터)
+        Vector2 tangent = baseTangent;
+
+        // 입력이 있을 때만, 입력 부호로 방향 결정
+        if (absInput > eps)
+            tangent = baseTangent * Mathf.Sign(inputX);
+
+        // === 2) 현재 속도를 접선 방향으로 투영 ===
+        Vector2 vel = rb.linearVelocity;
+        float speedOnTangent = Vector2.Dot(vel, tangent); // 접선 방향 스칼라 속도
+
+        // === 3) 목표 속도 설정 ===
+        float targetSpeed;
+
+        if (absInput > eps)
+        {
+            // 입력 있을 때: 항상 +moveSpeed 쪽으로 (방향은 tangent가 이미 들고 있음)
+            targetSpeed = moveSpeed;
+        }
+        else
+        {
+            // 입력 없으면 0으로 감속
+            targetSpeed = 0f;
+        }
+
+        // 가속/감속 비율
+        float rate = (absInput > eps) ? accel : deccel;
+
+        // === 4) 스칼라 속도를 보간 ===
+        float newSpeedOnTangent = Mathf.MoveTowards(speedOnTangent, targetSpeed, rate * dt);
+
+        // === 5) 최종 속도 벡터 구성 ===
+        Vector2 finalVel = tangent * newSpeedOnTangent;
+
+        // 지면에선 법선 방향 속도는 0으로 정리 (튀는 거 방지)
+        rb.linearVelocity = finalVel;
+    }
+
+
+    [Header("[ Slope ]")]
+    [SerializeField] private Vector2 slopeCheck;      // 발밑 기준 위치
+    [SerializeField] private float slopeCheckDistance = 0.5f; // 레이 길이
+    [SerializeField] private float maxSlopeAngle = 45f; // 허용하는 최대 경사각
+    [SerializeField] private LayerMask whatIsSlope; // 허용하는 최대 경사각
+
+    private Vector2 groundNormal = Vector2.up;
+    private float slopeAngle;
+    [SerializeField] private bool onSlope;
+    void CheckSlope()
+    {
+        Vector3 slopeOffset = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
+        RaycastHit2D hit = Physics2D.Raycast(
+            transform.position + slopeOffset,
+            Vector2.down,
+            slopeCheckDistance,
+            whatIsSlope
+        );
+
+        if (hit)
+        {
+            groundNormal = hit.normal;
+            slopeAngle   = Vector2.Angle(groundNormal, Vector2.up);
+
+            // 0도(평지) ~ maxSlopeAngle 사이만 슬로프라고 인정
+            onSlope = slopeAngle > 0f && slopeAngle <= maxSlopeAngle;
+        }
+        else
+        {
+            groundNormal = Vector2.up;
+            slopeAngle   = 0f;
+            onSlope      = false;
+        }
+    }
+    // normal 기준으로 오른쪽 방향 접선 구하기
+    Vector2 GetSlopeTangent(Vector2 normal)
+    {
+        // (0,1) 기준이면 (1,0) 이 나오는 패턴
+        return new Vector2(normal.y, -normal.x).normalized;
+    }
+
 
     void HandleWallSlide(float dt)
     {
@@ -323,7 +467,8 @@ public class PlayerController : Entity
 
 
 
-
+[Header("OneWay Platform")]
+[SerializeField] private LayerMask WhatIsPlatform;
 
 
     // ===================== 메인 루프 =====================
@@ -355,8 +500,24 @@ public class PlayerController : Entity
         ClampFall();
     }
 
-    // ===================== 1) 대전제 판정 =====================
-    private void GroundCheck()=>isGround = Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround);
+    // ===================== 1) 대전제 판정 =============== =====
+    private void GroundCheck(){
+        // if (!isGround && Current == ActionState.Fall && rb.linearVelocityY == 0)
+        // {
+        //     isGround =true;
+        //     return;
+        // }
+        isGround = Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround);
+
+        if      (Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround)) 
+            isGround = true;
+        else if (Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, WhatIsPlatform)
+                // && Current == ActionState.Fall 
+                && rb.linearVelocityY == 0)
+            isGround = true;
+        else
+            isGround = false;
+    }
     private void WallCheck()=>isWall = Physics2D.Raycast(transform.position, Vector2.right * faceDir, wallCheckDistance, WhatIsWall);
     void SenseBigState()
     {
@@ -689,5 +850,10 @@ public class PlayerController : Entity
         // Attack 
         if(attackPoint)
             Gizmos.DrawWireSphere(attackPoint.position,attackRadius);
+        
+        Gizmos.color = Color.yellow ;
+        Vector3 slopeOffset = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
+        Gizmos.DrawLine(transform.position + slopeOffset, transform.position + slopeOffset + (Vector3)(Vector2.down * slopeCheckDistance));
+        
     }
 }
