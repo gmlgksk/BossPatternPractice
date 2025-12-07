@@ -23,6 +23,7 @@ public class HP_System : MonoBehaviour
     {
         if (hp_current <= 0) 
         {
+
             entity.Die();
         }
     }

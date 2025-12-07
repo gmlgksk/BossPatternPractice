@@ -1,3 +1,5 @@
+using System.Collections;
+using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -56,14 +58,15 @@ public class PlayerController : Entity
     [SerializeField] private LayerMask WhatIsWall;
     [SerializeField] private float groundCheckDistance = 1.6f;
     [SerializeField] private float wallCheckDistance = 1f;
+    [SerializeField] private float groundCheckWide = .5f;
 
     [Header("내부 상태 보조")]
     [SerializeField] private float inputX;        // 연속 입력
-    [SerializeField] private float rawX;          // 원시 입력
+    [SerializeField] private Vector2 rawInput;          // 원시 입력
     [SerializeField] private int jumpCount;
     [SerializeField] private float lastGroundTime;
     [SerializeField] private float lastJumpPress;
-    [SerializeField] private float wallLock;
+    [SerializeField] private float wallLockTimer;
     [SerializeField] private float originGravity;
 
     [Header("Attack")]  
@@ -132,53 +135,66 @@ public class PlayerController : Entity
 
     // ===================== 입력 =====================
     public void OnMove(InputAction.CallbackContext ctx)
-{
-    rawX   = ctx.ReadValue<Vector2>().x;
-    inputX = Mathf.Clamp(rawX, -1f, 1f);
-    reqMove = Mathf.Abs(inputX) > eps;
-
-    var kb = Keyboard.current;
-    if (kb != null)
     {
-        bool leftDown   = kb.aKey.wasPressedThisFrame;
-        bool rightDown  = kb.dKey.wasPressedThisFrame;
-        bool leftUp     = kb.aKey.wasReleasedThisFrame;
-        bool rightUp    = kb.dKey.wasReleasedThisFrame;
+        if (Current == ActionState.Dead) return;
 
-        // ======= 여기서 "입력 변화" 체크 =======
-        bool anyNewPress = leftDown || rightDown;
-        bool anyRelease  = leftUp || rightUp;
+        if (wallLockTimer > 0f) return;
+        rawInput   = ctx.ReadValue<Vector2>();
+        inputX = Mathf.Clamp(rawInput.x, -1f, 1f);
+        reqMove = Mathf.Abs(inputX) > eps;
 
-        if ((anyNewPress || anyRelease) && Current == ActionState.Move && onSlope /* && !isJumping */)
+        var kb = Keyboard.current;
+        if (kb != null)
         {
-            // rb.linearVelocityY = 0;
+            bool leftDown   = kb.aKey.wasPressedThisFrame;
+            bool rightDown  = kb.dKey.wasPressedThisFrame;
+            bool leftUp     = kb.aKey.wasReleasedThisFrame;
+            bool rightUp    = kb.dKey.wasReleasedThisFrame;
+
+            // ======= 여기서 "입력 변화" 체크 =======
+            bool anyNewPress = leftDown || rightDown;
+            bool anyRelease  = leftUp   || rightUp;
+
+            if ((anyNewPress || anyRelease) && Current == ActionState.Move && onSlope /* && !isJumping */)
+            {
+                // rb.linearVelocityY = 0;
+            }
+            // ===================================
+
+            // 이 프레임에 새로 눌린 키 기준으로 lastKeyDir 갱신
+            if (leftDown)  lastKeyDir = -1;
+            if (rightDown) lastKeyDir =  1;
+
+            // 둘 다 떼었으면, 움직임만 멈추고 faceDir은 마지막 방향 유지
+            if (!kb.aKey.isPressed && !kb.dKey.isPressed)
+            {
+                reqMove = false;
+                inputX  = 0f;
+            }
         }
-        // ===================================
 
-        // 이 프레임에 새로 눌린 키 기준으로 lastKeyDir 갱신
-        if (leftDown)  lastKeyDir = -1;
-        if (rightDown) lastKeyDir =  1;
-
-        // 둘 다 떼었으면, 움직임만 멈추고 faceDir은 마지막 방향 유지
-        if (!kb.aKey.isPressed && !kb.dKey.isPressed)
+        // 실제 바라보는 방향은 lastKeyDir로
+        if (reqMove)
         {
-            reqMove = false;
-            inputX  = 0f;
+            faceDir = lastKeyDir;
         }
+        
     }
-
-    // 실제 바라보는 방향은 lastKeyDir로
-    if (reqMove)
+    private IEnumerator IgnorePlatform()
     {
-        faceDir = lastKeyDir;
+        gameObject.layer = LayerMask.NameToLayer("Platform_Ignore");
+        yield return new WaitForSeconds(0.2f);
+        gameObject.layer = LayerMask.NameToLayer("Player");
+
     }
-}
 
     private bool prevLeftKey;
     private bool prevRightKey;
 
     public void SetMoveDir()
     {
+        if (wallLockTimer > 0f) return;
+
         var kb = Keyboard.current;
         if (kb == null) return;
 
@@ -238,7 +254,13 @@ public class PlayerController : Entity
 
     public void OnDash(InputAction.CallbackContext ctx)
     {
-        if (ctx.performed) reqDash = true;
+        if (ctx.performed) 
+        {
+            if(onPlatform&&inputX==0) 
+                StartCoroutine(IgnorePlatform());
+            else 
+                reqDash = true;
+        }
     }
 
     public void OnAttack(InputAction.CallbackContext ctx)
@@ -285,7 +307,7 @@ public class PlayerController : Entity
 
     void Handle_Movement()
     {
-        if (Current == ActionState.Dash || Current == ActionState.Attack)
+        if (Current == ActionState.Attack)
             return;
 
         if (Current == ActionState.WallSlide)
@@ -295,6 +317,12 @@ public class PlayerController : Entity
         }
 
         float dt = Time.fixedDeltaTime;
+        // 대시 로직 편입
+        if (Current == ActionState.Dash)
+        {
+            HandleGroundMove(faceDir,dashSpeed,dt);
+            return;
+        }
 
         if (Current == ActionState.Jump 
             || Current == ActionState.WallJump
@@ -306,7 +334,7 @@ public class PlayerController : Entity
 
         // === 여기부터는 "지면 위"에서만 적용 ===
         CheckSlope();            // 레이로 법선 / 슬로프 여부 계산
-        HandleGroundMove(dt);
+        HandleGroundMove(inputX,moveSpeed,dt);
         
     }
 
@@ -317,7 +345,11 @@ public class PlayerController : Entity
 
     void HandleAirMove(float dt)
     {
-        float targetX = inputX * moveSpeed * airControl; // 공중에서 최대 속도
+        // 🔹 벽점프 락 동안에는 X속도를 유지 (중력만 작용)
+        if (wallLockTimer > 0f)
+            return;
+
+        float targetX = inputX * moveSpeed * airControl;
         float curX    = rb.linearVelocityX;
 
         bool hasInput = Mathf.Abs(inputX) > eps;
@@ -327,9 +359,10 @@ public class PlayerController : Entity
 
         rb.linearVelocity = new Vector2(newX, rb.linearVelocityY);
     }
-    void HandleGroundMove(float dt)
+
+    void HandleGroundMove(float x, float speed, float dt)
     {
-        float absInput = Mathf.Abs(inputX);
+        float absInput = Mathf.Abs(x);
 
         // === 1) 기본 접선(슬로프 방향) 계산 ===
         Vector2 baseTangent = GetSlopeTangent(groundNormal); // (지면 기준 오른쪽 향하는 벡터)
@@ -337,7 +370,7 @@ public class PlayerController : Entity
 
         // 입력이 있을 때만, 입력 부호로 방향 결정
         if (absInput > eps)
-            tangent = baseTangent * Mathf.Sign(inputX);
+            tangent = baseTangent * Mathf.Sign(x);
 
         // === 2) 현재 속도를 접선 방향으로 투영 ===
         Vector2 vel = rb.linearVelocity;
@@ -349,7 +382,7 @@ public class PlayerController : Entity
         if (absInput > eps)
         {
             // 입력 있을 때: 항상 +moveSpeed 쪽으로 (방향은 tangent가 이미 들고 있음)
-            targetSpeed = moveSpeed;
+            targetSpeed = speed;
         }
         else
         {
@@ -382,29 +415,41 @@ public class PlayerController : Entity
     [SerializeField] private bool onSlope;
     void CheckSlope()
     {
-        Vector3 slopeOffset = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
-        RaycastHit2D hit = Physics2D.Raycast(
-            transform.position + slopeOffset,
+        Vector3 frontSlopeOffset = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
+        Vector3 backSlopeOffset = new Vector2(-slopeCheck.x * faceDir, slopeCheck.y);
+
+        RaycastHit2D hitFront = Physics2D.Raycast(
+            transform.position + frontSlopeOffset,
+            Vector2.down,
+            slopeCheckDistance,
+            whatIsSlope
+        );
+        RaycastHit2D hitBack = Physics2D.Raycast(
+            transform.position + backSlopeOffset,
             Vector2.down,
             slopeCheckDistance,
             whatIsSlope
         );
 
-        if (hit)
+        if (hitFront || hitBack)
         {
-            groundNormal = hit.normal;
+            
+            groundNormal =  hitFront? hitFront.normal:
+                            hitBack?  hitBack.normal:
+                            groundNormal;
             slopeAngle   = Vector2.Angle(groundNormal, Vector2.up);
-
-            // 0도(평지) ~ maxSlopeAngle 사이만 슬로프라고 인정
-            onSlope = slopeAngle > 0f && slopeAngle <= maxSlopeAngle;
+            onSlope = (slopeAngle >= maxSlopeAngle-10 && slopeAngle <= maxSlopeAngle) || (slopeAngle <= -maxSlopeAngle+10 && slopeAngle >= -maxSlopeAngle);
+            rb.gravityScale = onSlope == true ?0 :originGravity;
         }
         else
         {
+            rb.gravityScale = originGravity;
             groundNormal = Vector2.up;
             slopeAngle   = 0f;
             onSlope      = false;
         }
     }
+
     // normal 기준으로 오른쪽 방향 접선 구하기
     Vector2 GetSlopeTangent(Vector2 normal)
     {
@@ -469,6 +514,7 @@ public class PlayerController : Entity
 
 [Header("OneWay Platform")]
 [SerializeField] private LayerMask WhatIsPlatform;
+[SerializeField] private bool onPlatform;
 
 
     // ===================== 메인 루프 =====================
@@ -507,16 +553,30 @@ public class PlayerController : Entity
         //     isGround =true;
         //     return;
         // }
-        isGround = Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround);
-
-        if      (Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround)) 
-            isGround = true;
-        else if (Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, WhatIsPlatform)
-                // && Current == ActionState.Fall 
+        if (GroundCheckBy3Rays(whatIsGround,groundCheckWide)) 
+        {
+            isGround    = true;
+            onPlatform  = false;
+        }
+        else if (GroundCheckBy3Rays(WhatIsPlatform,groundCheckWide)
                 && rb.linearVelocityY == 0)
-            isGround = true;
+        {
+            isGround    = true;
+            onPlatform  = true;
+        }
         else
-            isGround = false;
+        {
+            isGround    = false;
+            onPlatform  = false;
+        }
+    }
+    public bool GroundCheckBy3Rays(LayerMask targetLayer,float wide)
+    {
+        Vector3 xOffset = new Vector2(wide,0);
+        return Physics2D.Raycast(transform.position + xOffset, Vector2.down, groundCheckDistance, targetLayer)
+            || Physics2D.Raycast(transform.position - xOffset, Vector2.down, groundCheckDistance, targetLayer)
+            || Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, targetLayer);
+
     }
     private void WallCheck()=>isWall = Physics2D.Raycast(transform.position, Vector2.right * faceDir, wallCheckDistance, WhatIsWall);
     void SenseBigState()
@@ -531,7 +591,12 @@ public class PlayerController : Entity
             
             return;
         }
-
+        // if (wallLockTimer > 0f)
+        // {
+        //     isWall = false;
+        //     isAir  = true;
+        //     return;
+        // }
         // 그 다음 Wall
         WallCheck();
         if (isWall)
@@ -701,7 +766,9 @@ public class PlayerController : Entity
                 anim.SetBool("isWall", false);
 
                 // 2) 잠깐 입력 잠그기 (수평 속도 유지용)
-                wallLock = wallJumpControlLock;
+                wallLockTimer = wallJumpControlLock;
+
+                
 
                 // 3) 점프 카운트 소비
                 jumpCount = Mathf.Max(0, jumpCount - 1);
@@ -721,7 +788,6 @@ public class PlayerController : Entity
                 break;
 
             case ActionState.Dash:
-                rb.linearVelocityX = faceDir * dashSpeed;
                 anim.SetTrigger("isRoll");
                 break;
 
@@ -798,19 +864,8 @@ public class PlayerController : Entity
         }
 
         // --- WallJump 이동제한 타이머 ---
-        float prev = wallLock;         // 해제 순간(하강 에지) 검출용 백업
-        if (wallLock > 0f) wallLock -=Time.deltaTime;
-
-        // ★ '락 > 0' → '락 ≤ 0'이 된 바로 그 프레임에만 1회 동기화
-        // bool justUnlocked = (prev > 0f && wallLock <= 0f) && Current == ActionState.WallJump;
-        bool justUnlocked = prev > 0f && wallLock <= 0f;
-        if (justUnlocked
-            && Mathf.Abs(inputX) > 0.01f           // 입력이 있을 때만
-            && Current != ActionState.Dash         // 우선순위 액션 방해 방지
-            && Current != ActionState.Attack)
-        {
-            faceDir = (inputX > 0f) ? 1 : -1;      // ← 여기서 단 한 번만 입력 방향으로 갱신
-        }
+        if(wallLockTimer>0)
+            wallLockTimer -= Time.deltaTime;
     }
 
     protected override void Handle_Flip()
@@ -840,8 +895,11 @@ public class PlayerController : Entity
     void OnDrawGizmosSelected()
     {
         // Ground Check Ray
+        Vector3 xOffset = new Vector2(groundCheckWide,0);
         Gizmos.color = Color.green;
-        Gizmos.DrawLine(transform.position, transform.position - transform.up * groundCheckDistance);
+        Gizmos.DrawLine(transform.position + xOffset, transform.position + xOffset + Vector3.down * groundCheckDistance);
+        Gizmos.DrawLine(transform.position - xOffset, transform.position - xOffset + Vector3.down * groundCheckDistance);
+        Gizmos.DrawLine(transform.position, transform.position + Vector3.down * groundCheckDistance);
 
         // Wall Check Ray
         Gizmos.color = Color.cyan;
@@ -851,9 +909,12 @@ public class PlayerController : Entity
         if(attackPoint)
             Gizmos.DrawWireSphere(attackPoint.position,attackRadius);
         
+        // Slope Check
         Gizmos.color = Color.yellow ;
-        Vector3 slopeOffset = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
-        Gizmos.DrawLine(transform.position + slopeOffset, transform.position + slopeOffset + (Vector3)(Vector2.down * slopeCheckDistance));
+        Vector3 slopeOffsetFront = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
+        Vector3 slopeOffsetBack = new Vector2(-slopeCheck.x * faceDir, slopeCheck.y);
+        Gizmos.DrawLine(transform.position + slopeOffsetFront, transform.position + slopeOffsetFront + (Vector3)(Vector2.down * slopeCheckDistance));
+        Gizmos.DrawLine(transform.position + slopeOffsetBack, transform.position + slopeOffsetBack + (Vector3)(Vector2.down * slopeCheckDistance));
         
     }
 }

@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Enemy : Entity
 {
-    private enum State {Patrol, Warning, Chase, Attack}
+    private enum EnemyState {Dead, Patrol, Warning, Chase, Attack}
     [Header("===== Enemy Details! =====")]
 
     [Header("[ Indecator ]")]
@@ -23,7 +23,7 @@ public class Enemy : Entity
     public Transform[]      platforms;
 
     [Header("[ Sight Details ]")]
-    private State  currentState;
+    private EnemyState currentState;
     public bool             lookedTarget;
     public float            lookingTimer = 0f;
     public float            chasingTimer = 0f;
@@ -48,6 +48,7 @@ public class Enemy : Entity
 
     [Header("[ Chase ]")]
     public float            chaseSpeed = 6f;
+    public float            chaseEndRadius;
     public Transform        target;
 
     [Header("[ Stairs ]")]
@@ -88,23 +89,28 @@ public class Enemy : Entity
 
         stateText   = GetComponentInChildren<TMP_Text>();
         anim        = GetComponentInChildren<Animator>();
+
+        currentState = EnemyState.Patrol;
     }
     protected override void Update()
     {
-        if(isDie) return;
         base.Update();
         Handle_State();
+        Handle_Information();
+        anim.SetFloat("velocityX",rb.linearVelocityX);
+
+        if (isDie) return;
         HandleSight();
         Handle_MovementByState(currentState);
-        totalState = $"curFloor:{currentFloor},targetFloor:{targetFloor},updown{goToUpDown}";
-        if(target)
-            targetFloor = FloorCheck(target);
-
-        stateText.text = entityState;
-        anim.SetFloat("velocityX",rb.linearVelocityX);
     }
 
-
+    public void Handle_Information()
+    {
+        totalState = $"curFloor:{currentFloor},targetFloor:{targetFloor},updown{goToUpDown}";
+        stateText.text = entityState;
+        if(target)
+            targetFloor = FloorCheck(target);
+    }
 
 
 
@@ -117,21 +123,24 @@ public class Enemy : Entity
     {
         // [순찰] -> [경계] -> [추적]&[공격] -> [경계] -> [순찰]
         // 공격범위에 들어오면 무조건 [공격]
-        if (OnAttackRange() && target) currentState = State.Attack;
-        
+        if (!isDie && OnAttackRange() && target) currentState = EnemyState.Attack;
+        if ( isDie )currentState = EnemyState.Dead;
         switch (currentState)
         {
+            case EnemyState.Dead:
+                entityState = "i'm Dead. Sad:(";
+                break;
             // ===== 순찰 상태
-            case State.Patrol:
+            case EnemyState.Patrol:
                 entityState = "patrol";
                 if (lookedTarget)
                 {
-                    currentState = State.Warning;
+                    currentState = EnemyState.Warning;
                     break;
                 }
                 break;
             // ===== 경계 상태
-            case State.Warning:
+            case EnemyState.Warning:
                 entityState = "warning";
                 chasingTimer = 0;
                 if (lookedTarget)
@@ -142,23 +151,23 @@ public class Enemy : Entity
                 // 경계 애니메이션, 움직임 등
 
                 if (lookingTimer > identityTime)
-                    currentState = State.Chase;
+                    currentState = EnemyState.Chase;
                 else if (lookingTimer < 0)
-                    currentState = State.Patrol;
+                    currentState = EnemyState.Patrol;
 
                 break;
             // ===== 추적 상태
-            case State.Chase:
+            case EnemyState.Chase:
                 entityState = "chase";
                 lookingTimer = 0f;
                 chasingTimer += Time.deltaTime;
 
                 if (lookedTarget) chasingTimer=0;
                 if (chasingTimer > chaseEndTime)
-                    currentState = State.Warning;
+                    currentState = EnemyState.Warning;
                 break;
             // ===== 공격상태 /상태해제는 애니메이터에서
-            case State.Attack:
+            case EnemyState.Attack:
                 entityState = "attack";
                 break;
 
@@ -166,12 +175,17 @@ public class Enemy : Entity
                 break;
         }   
     }
-    private void Handle_MovementByState(State state)
+    private void Handle_MovementByState(EnemyState state)
     {
-        if      (state == State.Patrol)  Patrol();
-        else if (state == State.Warning) Warning();
-        else if (state == State.Chase)   Chase();
-        else if (state == State.Attack)  Attack();
+        if      (state == EnemyState.Dead)       Dead();
+        else if (state == EnemyState.Patrol)     Patrol();
+        else if (state == EnemyState.Warning)    Warning();
+        else if (state == EnemyState.Chase)      Chase();
+        else if (state == EnemyState.Attack)     Attack();
+    }
+    public void Dead()
+    {
+        
     }
     public void Patrol()
     {
@@ -187,8 +201,7 @@ public class Enemy : Entity
         if (Vector2.Distance(transform.position, targetPos) < 0.1f)
         {
             patrolIndex++;
-            if (patrolIndex >= patrolPoints.Length)
-                patrolIndex = 0; // 다시 처음으로
+            if (patrolIndex >= patrolPoints.Length) patrolIndex = 0; // 다시 처음으로
         }
     }
     public void Warning()
@@ -275,7 +288,7 @@ public class Enemy : Entity
 
     public override void Attack_End()
     {
-        currentState = State.Chase;
+        currentState = EnemyState.Chase;
     }
 
 
@@ -286,9 +299,11 @@ public class Enemy : Entity
     // ========== 보조함수들 ==========
     public bool OnAttackRange()
     {
-        if(Physics2D.OverlapCircle(attackPoint.position,attackRadius,whatIsTarget))
-            return true;
-        return false;
+        Collider2D target = Physics2D.OverlapCircle(attackPoint.position,chaseEndRadius,whatIsTarget);
+
+        return target != null
+            && target.TryGetComponent<PlayerController>(out var player)
+            && player.Current != PlayerController.ActionState.Dead;
     }
 
     private void HandleSight()
@@ -335,6 +350,9 @@ public class Enemy : Entity
             Debug.Log($"[{debugTag}] 아무것도 안 맞음");
             return false;
         }
+        if (hit.collider.TryGetComponent<PlayerController>(out var player)
+            && player.Current == PlayerController.ActionState.Dead)
+            return false;
 
         int hitLayer = hit.collider.gameObject.layer;
         int hitBit   = 1 << hitLayer;
@@ -398,6 +416,8 @@ public class Enemy : Entity
         {
             Gizmos.color = Color.orange;
             Gizmos.DrawWireSphere(attackPoint.position,attackRadius);
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(attackPoint.position,chaseEndRadius);
         }
 
     }
