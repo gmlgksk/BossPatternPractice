@@ -122,7 +122,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: pixil-layer-Layer 1_0
+      name: Wall_0
       rect:
         serializedVersion: 2
         x: 0
@@ -130,21 +130,21 @@ TextureImporter:
         width: 43
         height: 52
       alignment: 9
-      pivot: {x: 0.34, y: 0.5}
+      pivot: {x: 0.4, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: fc91081a835876ca0800000000000000
-      internalID: -6023699498310559281
+      spriteID: a6f28d887059684408b1c9f16efd5c5c
+      internalID: 40334283
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pixil-layer-Layer 1_1
+      name: Wall_1
       rect:
         serializedVersion: 2
         x: 43
@@ -152,21 +152,21 @@ TextureImporter:
         width: 43
         height: 52
       alignment: 9
-      pivot: {x: 0.34, y: 0.5}
+      pivot: {x: 0.4, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 4f919801f55f92650800000000000000
-      internalID: 6208763349955058164
+      spriteID: 99533ef9fab7bf34db0d56e25c78f59f
+      internalID: -973752938
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pixil-layer-Layer 1_2
+      name: Wall_2
       rect:
         serializedVersion: 2
         x: 86
@@ -174,21 +174,21 @@ TextureImporter:
         width: 43
         height: 52
       alignment: 9
-      pivot: {x: 0.34, y: 0.5}
+      pivot: {x: 0.4, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 4a82a443ef9309e40800000000000000
-      internalID: 5661088495566465188
+      spriteID: 492aafa3d1f4cc548a293a186deea5fb
+      internalID: 530873439
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pixil-layer-Layer 1_3
+      name: Wall_3
       rect:
         serializedVersion: 2
         x: 129
@@ -196,15 +196,15 @@ TextureImporter:
         width: 43
         height: 52
       alignment: 9
-      pivot: {x: 0.34, y: 0.5}
+      pivot: {x: 0.4, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 65b3e7700f9f1a7a0800000000000000
-      internalID: -6367533588811990186
+      spriteID: 44974db4fb4776347a264a350495cd13
+      internalID: -544010744
       vertices: []
       indices: 
       edges: []
@@ -223,12 +223,12 @@ TextureImporter:
     spriteCustomMetadata:
       entries:
       - key: SpriteEditor.SliceSettings
-        value: '{"sliceOnImport":false,"gridCellCount":{"x":4.0,"y":1.0},"gridSpriteSize":{"x":43.0,"y":52.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":4.0,"y":1.0},"gridSpriteSize":{"x":43.0,"y":52.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.4000000059604645,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":9,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      pixil-layer-Layer 1_0: -6023699498310559281
-      pixil-layer-Layer 1_1: 6208763349955058164
-      pixil-layer-Layer 1_2: 5661088495566465188
-      pixil-layer-Layer 1_3: -6367533588811990186
+      Wall_0: 40334283
+      Wall_1: -973752938
+      Wall_2: 530873439
+      Wall_3: -544010744
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

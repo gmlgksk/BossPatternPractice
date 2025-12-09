@@ -41,6 +41,7 @@ public class PlayerController : Entity
 
     [Header("Wall")]
     [SerializeField] Vector2 wallJumpDir = new Vector2(1.0f, 1.1f);
+    [SerializeField] Vector2 wallCheckPos = new(0f, 1f);
     [SerializeField] private float wallJumpForce = 12f;
     [SerializeField] private float wallJumpControlLock = 0.15f;
     [SerializeField] private float wallSlideSlowTime = 1f; // 최대 속도까지 도달하는 시간
@@ -58,7 +59,6 @@ public class PlayerController : Entity
     [SerializeField] private LayerMask WhatIsWall;
     [SerializeField] private float groundCheckDistance = 1.6f;
     [SerializeField] private float wallCheckDistance = 1f;
-    [SerializeField] private float groundCheckWide = .5f;
 
     [Header("내부 상태 보조")]
     [SerializeField] private float inputX;        // 연속 입력
@@ -96,14 +96,27 @@ public class PlayerController : Entity
 
 
 
+    [Header("[ Air Control ]")]
+    [SerializeField] float airAccel  = 0;
+    [SerializeField] float airDeccel = 0;
 
 
 
+[Header("[ Slope ]")]
+    [SerializeField] private Vector2 groundAndSlopeCheckPos;      // 발밑 기준 위치
+    [SerializeField] private float slopeCheckDistance = 0.5f; // 레이 길이
+    [SerializeField] private float maxSlopeAngle = 45f; // 허용하는 최대 경사각
+    [SerializeField] private LayerMask whatIsSlope; // 허용하는 최대 경사각
+
+    private Vector2 groundNormal = Vector2.up;
+    private float slopeAngle;
+    [SerializeField] private bool onSlope;
 
 
 
-
-
+[Header("OneWay Platform")]
+[SerializeField] private LayerMask WhatIsPlatform;
+[SerializeField] private bool onPlatform;
 
 
 
@@ -271,6 +284,7 @@ public class PlayerController : Entity
     public void Handle_Animations()
     {
         anim.SetFloat("yVelocity",rb.linearVelocityY);
+        anim.SetFloat("xVelocity",rb.linearVelocityX);
         anim.SetBool("isGround",isGround);
         anim.SetBool("isWall", isWall);
     }
@@ -307,23 +321,23 @@ public class PlayerController : Entity
 
     void Handle_Movement()
     {
+        float dt = Time.fixedDeltaTime;
         if (Current == ActionState.Attack)
             return;
-
         if (Current == ActionState.WallSlide)
         {
             HandleWallSlide(Time.fixedDeltaTime);
             return;
         }
 
-        float dt = Time.fixedDeltaTime;
+        // if (isGround) 
+            CheckSlope();            // 레이로 법선 / 슬로프 여부 계산
         // 대시 로직 편입
         if (Current == ActionState.Dash)
         {
             HandleGroundMove(faceDir,dashSpeed,dt);
             return;
         }
-
         if (Current == ActionState.Jump 
             || Current == ActionState.WallJump
             || Current == ActionState.Fall)
@@ -331,17 +345,11 @@ public class PlayerController : Entity
             HandleAirMove(dt);   // 기존 공중 이동 함수 그대로
             return;
         }
-
         // === 여기부터는 "지면 위"에서만 적용 ===
-        CheckSlope();            // 레이로 법선 / 슬로프 여부 계산
         HandleGroundMove(inputX,moveSpeed,dt);
-        
     }
 
 
-    [Header("[ Air Control ]")]
-    [SerializeField] float airAccel  = 200f;
-    [SerializeField] float airDeccel = 200f;
 
     void HandleAirMove(float dt)
     {
@@ -404,19 +412,11 @@ public class PlayerController : Entity
     }
 
 
-    [Header("[ Slope ]")]
-    [SerializeField] private Vector2 slopeCheck;      // 발밑 기준 위치
-    [SerializeField] private float slopeCheckDistance = 0.5f; // 레이 길이
-    [SerializeField] private float maxSlopeAngle = 45f; // 허용하는 최대 경사각
-    [SerializeField] private LayerMask whatIsSlope; // 허용하는 최대 경사각
-
-    private Vector2 groundNormal = Vector2.up;
-    private float slopeAngle;
-    [SerializeField] private bool onSlope;
+    
     void CheckSlope()
     {
-        Vector3 frontSlopeOffset = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
-        Vector3 backSlopeOffset = new Vector2(-slopeCheck.x * faceDir, slopeCheck.y);
+        Vector3 frontSlopeOffset = new Vector2(groundAndSlopeCheckPos.x * faceDir, groundAndSlopeCheckPos.y);
+        Vector3 backSlopeOffset = new Vector2(-groundAndSlopeCheckPos.x * faceDir, groundAndSlopeCheckPos.y);
 
         RaycastHit2D hitFront = Physics2D.Raycast(
             transform.position + frontSlopeOffset,
@@ -438,7 +438,8 @@ public class PlayerController : Entity
                             hitBack?  hitBack.normal:
                             groundNormal;
             slopeAngle   = Vector2.Angle(groundNormal, Vector2.up);
-            onSlope = (slopeAngle >= maxSlopeAngle-10 && slopeAngle <= maxSlopeAngle) || (slopeAngle <= -maxSlopeAngle+10 && slopeAngle >= -maxSlopeAngle);
+            onSlope = (slopeAngle >= maxSlopeAngle-10 && slopeAngle <= maxSlopeAngle+1) || 
+                    (slopeAngle <= -maxSlopeAngle+10 && slopeAngle >= -maxSlopeAngle-1);
             rb.gravityScale = onSlope == true ?0 :originGravity;
         }
         else
@@ -512,9 +513,7 @@ public class PlayerController : Entity
 
 
 
-[Header("OneWay Platform")]
-[SerializeField] private LayerMask WhatIsPlatform;
-[SerializeField] private bool onPlatform;
+
 
 
     // ===================== 메인 루프 =====================
@@ -553,12 +552,12 @@ public class PlayerController : Entity
         //     isGround =true;
         //     return;
         // }
-        if (GroundCheckBy3Rays(whatIsGround,groundCheckWide)) 
+        if (GroundCheckBy3Rays(whatIsGround,groundAndSlopeCheckPos.x)) 
         {
             isGround    = true;
             onPlatform  = false;
         }
-        else if (GroundCheckBy3Rays(WhatIsPlatform,groundCheckWide)
+        else if (GroundCheckBy3Rays(WhatIsPlatform,groundAndSlopeCheckPos.x)
                 && rb.linearVelocityY == 0)
         {
             isGround    = true;
@@ -578,7 +577,12 @@ public class PlayerController : Entity
             || Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, targetLayer);
 
     }
-    private void WallCheck()=>isWall = Physics2D.Raycast(transform.position, Vector2.right * faceDir, wallCheckDistance, WhatIsWall);
+    private void WallCheck()=> isWall = Physics2D.Raycast(
+                                        transform.position + (Vector3)wallCheckPos, 
+                                        Vector2.right * faceDir, 
+                                        wallCheckDistance, 
+                                        WhatIsWall
+                                        );
     void SenseBigState()
     {
         // Ground 우선
@@ -895,24 +899,25 @@ public class PlayerController : Entity
     void OnDrawGizmosSelected()
     {
         // Ground Check Ray
-        Vector3 xOffset = new Vector2(groundCheckWide,0);
+        Vector3 xOffset = new Vector2(groundAndSlopeCheckPos.x,0);
         Gizmos.color = Color.green;
         Gizmos.DrawLine(transform.position + xOffset, transform.position + xOffset + Vector3.down * groundCheckDistance);
         Gizmos.DrawLine(transform.position - xOffset, transform.position - xOffset + Vector3.down * groundCheckDistance);
         Gizmos.DrawLine(transform.position, transform.position + Vector3.down * groundCheckDistance);
 
-        // Wall Check Ray
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawLine(transform.position, transform.position + transform.right * wallCheckDistance * faceDir);
-
         // Attack 
-        if(attackPoint)
-            Gizmos.DrawWireSphere(attackPoint.position,attackRadius);
+        Gizmos.color = Color.cyan;
+        if(attackPoint) Gizmos.DrawWireSphere(attackPoint.position,attackRadius);
+
+        // Wall Check Ray
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(transform.position + (Vector3)wallCheckPos, 
+                        transform.position + (Vector3)wallCheckPos + transform.right * wallCheckDistance * faceDir);
         
         // Slope Check
         Gizmos.color = Color.yellow ;
-        Vector3 slopeOffsetFront = new Vector2(slopeCheck.x * faceDir, slopeCheck.y);
-        Vector3 slopeOffsetBack = new Vector2(-slopeCheck.x * faceDir, slopeCheck.y);
+        Vector3 slopeOffsetFront = new Vector2(groundAndSlopeCheckPos.x * faceDir, groundAndSlopeCheckPos.y);
+        Vector3 slopeOffsetBack = new Vector2(-groundAndSlopeCheckPos.x * faceDir, groundAndSlopeCheckPos.y);
         Gizmos.DrawLine(transform.position + slopeOffsetFront, transform.position + slopeOffsetFront + (Vector3)(Vector2.down * slopeCheckDistance));
         Gizmos.DrawLine(transform.position + slopeOffsetBack, transform.position + slopeOffsetBack + (Vector3)(Vector2.down * slopeCheckDistance));
         

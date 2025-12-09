@@ -62,7 +62,7 @@ public class Bullet : MonoBehaviour
         {// 3. 주인공이 맞음
             Debug.Log("플레이어 총맞음 : "+ collision.gameObject.name);
 
-            PlayerDie player = collision.GetComponent<PlayerDie>();
+            PlayerController player = collision.GetComponent<PlayerController>();
 
             player.Die();
         }

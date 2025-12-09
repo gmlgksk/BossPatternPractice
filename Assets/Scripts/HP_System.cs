@@ -7,7 +7,7 @@ public class HP_System : MonoBehaviour
     private Entity entity;
     private Animator anim;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    protected virtual void Awake()
     {
         hp_current  = hp_max;
         entity      = GetComponent<Entity>();
@@ -15,19 +15,18 @@ public class HP_System : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    protected virtual void Update()
     {
         Handle_HP();
     }
-    public void Handle_HP()
+    protected virtual void Handle_HP()
     {
         if (hp_current <= 0) 
         {
-
             entity.Die();
         }
     }
-    public void Health_Init()
+    protected virtual void Health_Init()
     {
         hp_current = hp_max;
     }
@@ -58,15 +57,15 @@ public class HP_System : MonoBehaviour
             return;
         }
     }
-    public void Reaction_heal()
+    protected virtual void Reaction_heal()
     { // 회복 효과
     
     }
-    public void Reaction_hurt()
+    protected virtual void Reaction_hurt()
     { // 피격 효과
     
     }
-    public void Reaction_Die()
+    protected virtual void Reaction_Die()
     { // 사망효과
         anim.SetTrigger("die");
     }

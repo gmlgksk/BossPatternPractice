@@ -73,7 +73,6 @@ public class HP : MonoBehaviour
             yield return new WaitForSeconds(blinkDuration / 2);
         }
         isDamegedable = true;
-
     }
 
     public void Dead()
