@@ -76,10 +76,12 @@ public class PlayerController : Entity
     [SerializeField] private float attackForce=8;
     public GameObject attackObject;
     private AttackAnimation attackAnim;
+
     [Header("Attack details")]
     [SerializeField]protected float attackRadius = 3.5f;
     [SerializeField]protected Transform attackPoint;
     [SerializeField]protected LayerMask whatIsTarget;
+    Vector2 WorldMouseDir;
     
 
     [Header("입력 요청 (우선순위용)")]
@@ -102,7 +104,7 @@ public class PlayerController : Entity
 
 
 
-[Header("[ Slope ]")]
+    [Header("[ Slope ]")]
     [SerializeField] private Vector2 groundAndSlopeCheckPos;      // 발밑 기준 위치
     [SerializeField] private float slopeCheckDistance = 0.5f; // 레이 길이
     [SerializeField] private float maxSlopeAngle = 45f; // 허용하는 최대 경사각
@@ -114,10 +116,11 @@ public class PlayerController : Entity
 
 
 
-[Header("OneWay Platform")]
-[SerializeField] private LayerMask WhatIsPlatform;
-[SerializeField] private bool onPlatform;
+    [Header("OneWay Platform")]
+    [SerializeField] private LayerMask WhatIsPlatform;
+    [SerializeField] private bool onPlatform;
 
+     private PlayHitLineEffect hitLineEffect;
 
 
 
@@ -139,12 +142,13 @@ public class PlayerController : Entity
         base.Awake();
         mouseDirScript  = GetComponent<MouseDirectionFromPlayer>();
         originGravity   = GetComponent<Rigidbody2D>().gravityScale;
+        hitLineEffect   = GetComponent<PlayHitLineEffect>();
         if (attackObject != null)
             attackAnim = attackObject.GetComponentInChildren<AttackAnimation>();
 
         jumpCount       = maxJumpCount;
     
-    }
+    }   
 
     // ===================== 입력 =====================
     public void OnMove(InputAction.CallbackContext ctx)
@@ -736,14 +740,16 @@ public class PlayerController : Entity
                 break;
 
             case ActionState.Attack:
-            
+
                 attackRemainTime = attackLimitTime;        // 잠금 시간
                 DamageTargets();
+                
+                
                 rb.gravityScale = originGravity/4;
                 if (mouseDirScript.MouseDirection.x>0 && faceDir == -1 ||
                     mouseDirScript.MouseDirection.x<0 && faceDir == 1)
                     Flip();
-                Vector2 WorldMouseDir=mouseDirScript.MouseDirection * faceDir;
+                WorldMouseDir = mouseDirScript.MouseDirection * faceDir;
                 attackObject.SetActive(true);
                 attackAnim.Play();
                 attackObject.transform.right = WorldMouseDir;
@@ -752,6 +758,8 @@ public class PlayerController : Entity
                 rb.AddForce(mouseDirScript.MouseDirection * attackForce,ForceMode2D.Impulse);
                 anim.SetBool("isRun", false);
                 anim.SetTrigger("isAttack");
+                // 이펙트 테스트
+                hitLineEffect.PlayHitEffect(mouseDirScript.MouseDirection);
                 break;
 
             case ActionState.Jump:
@@ -842,6 +850,8 @@ public class PlayerController : Entity
         
         foreach (Collider2D enemy in enemyColliders)
         {
+            CinemachineShake.Instance.Shake(0.2f, 5.0f, 5.0f);
+            
             // 적 엔티티
             HP_System entityTarget = enemy.GetComponent<HP_System>();
             entityTarget.Health_Reduce();

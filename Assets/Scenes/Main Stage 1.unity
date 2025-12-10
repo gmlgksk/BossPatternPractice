@@ -4001,25 +4001,9 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 797954441668707228, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 797954441668707228, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 797954441668707228, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -10
-      objectReference: {fileID: 0}
     - target: {fileID: 844378777755888536, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
       propertyPath: m_Name
       value: Player 2.0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2555048631721441426, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: Priority.Enabled
-      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4544489340116544758, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
       propertyPath: m_LocalPosition.x
@@ -4061,30 +4045,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: accel
-      value: 100
-      objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: wallCheckPos.y
-      value: 0.55
-      objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: slopeCheckDistance
-      value: 0.33
-      objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: groundCheckDistance
-      value: 0.77
-      objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: groundAndSlopeCheckPos.x
-      value: 0.32
-      objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: groundAndSlopeCheckPos.y
-      value: -0.44
-      objectReference: {fileID: 0}
+    - target: {fileID: 6304332120805309806, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
+      propertyPath: cam
+      value: 
+      objectReference: {fileID: 931912975377680600}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

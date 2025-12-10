@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 6304332120805309806}
   - component: {fileID: 2914875445684146448}
   - component: {fileID: 2566715144389942551}
+  - component: {fileID: 2161612697566230168}
   m_Layer: 6
   m_Name: Player 2.0
   m_TagString: Player
@@ -289,7 +290,7 @@ MonoBehaviour:
   isDie: 0
   debugSummary: 
   animSpeed: 1
-  accel: 200
+  accel: 100
   deccel: 230
   airControl: 0.9
   maxFallSpeed: -20
@@ -298,12 +299,12 @@ MonoBehaviour:
   coyoteTime: 0.1
   jumpBuffer: 0.1
   wallJumpDir: {x: 1, y: 1.6}
-  wallCheckPos: {x: 0, y: 0.69}
-  wallJumpForce: 30
+  wallCheckPos: {x: 0, y: 0.55}
+  wallJumpForce: 40
   wallJumpControlLock: 0.2
   wallSlideSlowTime: 3
   wallSlideMaxSpeed: -20
-  wallSlideHoldTime: 0.5
+  wallSlideHoldTime: 0.1
   dashSpeed: 15
   whatIsGround:
     serializedVersion: 2
@@ -311,7 +312,7 @@ MonoBehaviour:
   WhatIsWall:
     serializedVersion: 2
     m_Bits: 8
-  groundCheckDistance: 0.74
+  groundCheckDistance: 0.77
   wallCheckDistance: 0.4
   inputX: 0
   rawInput: {x: 0, y: 0}
@@ -335,9 +336,9 @@ MonoBehaviour:
   reqDash: 0
   reqMove: 0
   airAccel: 90
-  airDeccel: 0
-  groundAndSlopeCheckPos: {x: 0.32, y: -0.41}
-  slopeCheckDistance: 0.17
+  airDeccel: 20
+  groundAndSlopeCheckPos: {x: 0.32, y: -0.44}
+  slopeCheckDistance: 0.33
   maxSlopeAngle: 45
   whatIsSlope:
     serializedVersion: 2
@@ -413,6 +414,22 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: -0.065}
   m_Size: {x: 0.67, y: 1.28}
   m_Direction: 0
+--- !u!114 &2161612697566230168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 844378777755888536}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d18ff5cf9c6782f4d934ac5ef53d72f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayHitLineEffect
+  slashEffectPrefab: {fileID: 6800561865549661530, guid: 4dbeb195ceadd0f4792bd4cbc2f7034d, type: 3}
+  slashSpeed: 200
+  slashLifeTime: 0.2
+  startOffset: 15
 --- !u!1 &4643649949527928192
 GameObject:
   m_ObjectHideFlags: 0
@@ -551,6 +568,8 @@ GameObject:
   - component: {fileID: 797954441668707228}
   - component: {fileID: 2555048631721441426}
   - component: {fileID: 7002754512472862906}
+  - component: {fileID: 5330747420646181765}
+  - component: {fileID: 3430443949790942768}
   m_Layer: 0
   m_Name: CinemachineCamera
   m_TagString: Untagged
@@ -647,6 +666,35 @@ MonoBehaviour:
     Time: 0
     Smoothing: 0
     IgnoreY: 0
+--- !u!114 &5330747420646181765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7003123677621751451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68bb026fafb42b14791938953eaace77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineBasicMultiChannelPerlin
+  NoiseProfile: {fileID: 11400000, guid: e99d5268df02d574080f116ad002c18d, type: 2}
+  PivotOffset: {x: 0, y: 0, z: 0}
+  AmplitudeGain: 0
+  FrequencyGain: 0
+  m_NoiseOffsets: {x: 0, y: 0, z: 0}
+--- !u!114 &3430443949790942768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7003123677621751451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9d8f63ca2924134695f43fd9497c7b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CinemachineShake
 --- !u!1 &7489880589853236629
 GameObject:
   m_ObjectHideFlags: 0

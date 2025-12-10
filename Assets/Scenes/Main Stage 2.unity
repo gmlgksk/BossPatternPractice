@@ -4317,18 +4317,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: airDeccel
-      value: 20
-      objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: wallSlideHoldTime
-      value: 0.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8385037708559331927, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
-      propertyPath: slopeCheckDistance
-      value: 0.4
-      objectReference: {fileID: 0}
+    - target: {fileID: 6304332120805309806, guid: b160849bdd84b114a85eacb8ae247744, type: 3}
+      propertyPath: cam
+      value: 
+      objectReference: {fileID: 931912975377680600}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
