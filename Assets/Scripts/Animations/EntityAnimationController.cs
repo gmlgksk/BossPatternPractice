@@ -18,5 +18,9 @@ public class EntityAnimationController : MonoBehaviour
     {
         entity.Attack_End();
     }
+    public void Die_End()
+    {
+        entity.Die_End();
+    }
 
 }

@@ -325,7 +325,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &5015375535673186369
 Transform:
   m_ObjectHideFlags: 0
@@ -643,7 +643,6 @@ MonoBehaviour:
   targetIndicator: {fileID: 0}
   canvas: {fileID: 8857120824161053059}
   arrowUI: {fileID: 8505720562594196854}
-  targetMarkerUI: {fileID: 4630077630754005920}
   edgePadding: 50
   arrowOffsetFromEdge: 0
 --- !u!1 &7797527145412057007

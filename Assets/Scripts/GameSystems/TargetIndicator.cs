@@ -12,7 +12,6 @@ public class TargetIndicator : MonoBehaviour
     [Header("UI")]
     public Canvas canvas;
     public RectTransform arrowUI;          // 화면 가장자리 화살표
-    public RectTransform targetMarkerUI;    // 루트 (위치)
 
     [Header("옵션")]
     public float edgePadding = 50f;        // 화면 가장자리에서 약간 안쪽으로
@@ -20,63 +19,27 @@ public class TargetIndicator : MonoBehaviour
 
     RectTransform canvasRect;
     Sequence markerSeq;   // ✨ 마커 연출용 시퀀스
-
+    EnemyPool enemyPool;
+    bool hasEnemyPool;
     void Awake()
     {
         if (!cam) cam = Camera.main;
         canvasRect = canvas.GetComponent<RectTransform>();
-
+        
+        enemyPool =FindAnyObjectByType<EnemyPool>();
+        hasEnemyPool = enemyPool? true: false;
         SetupMarkerSequence();
-    }
-    void SetupMarkerSequence()
-    {
-        if (targetMarkerUI == null) return;
-
-        // 초기값 리셋
-        targetMarkerUI.localScale = Vector3.one;
-        targetMarkerUI.anchoredPosition = Vector2.zero;
-        targetMarkerUI.localRotation = Quaternion.Euler(0, 0, 180f); // 아래 방향
-
-        // 이미 있다면 재사용
-        markerSeq?.Kill();
-        markerSeq = DOTween.Sequence()
-            .SetAutoKill(false)
-            .SetLoops(-1, LoopType.Restart)
-            .Pause(); // 기본은 멈춰두기
-
-        // 1단계: 살짝 납작해지면서 살짝 올라감
-        markerSeq.Append(
-            targetMarkerUI.DOScaleY(0.8f, 0.08f).SetEase(Ease.OutQuad)
-        );
-        markerSeq.Join(
-            targetMarkerUI.DOAnchorPosY(8f, 0.08f).SetEase(Ease.OutQuad)
-        );
-
-        // 2단계: 원래 비율로 돌아오면서 더 위로
-        markerSeq.Append(
-            targetMarkerUI.DOScaleY(1.1f, 0.12f).SetEase(Ease.OutQuad)
-        );
-        markerSeq.Join(
-            targetMarkerUI.DOAnchorPosY(16f, 0.12f).SetEase(Ease.OutQuad)
-        );
-
-        // 3단계: 스케일/위치 원상복귀
-        markerSeq.Append(
-            targetMarkerUI.DOScaleY(1f, 0.12f).SetEase(Ease.InQuad)
-        );
-        markerSeq.Join(
-            targetMarkerUI.DOAnchorPosY(0f, 0.12f).SetEase(Ease.InQuad)
-        );
     }
     void LateUpdate()
     {
-        if (!target) 
+        if (!target || (hasEnemyPool && enemyPool.ShowRemainEnemy()>0)) 
         {
             arrowUI.gameObject.SetActive(false);
-            targetMarkerUI.gameObject.SetActive(false);
             markerSeq?.Pause();
             return;
         }
+
+        target.gameObject.SetActive(true);
 
         // 1. 월드 → 뷰포트
         Vector3 vp = cam.WorldToViewportPoint(target.position);
@@ -95,10 +58,57 @@ public class TargetIndicator : MonoBehaviour
         }
     }
 
+
+
+
+
+
+
+
+    void SetupMarkerSequence()
+    {
+        if (arrowUI == null) return;
+
+        // 초기값 리셋
+        arrowUI.localScale = Vector3.one;
+        arrowUI.anchoredPosition = Vector2.zero;
+        arrowUI.localRotation = Quaternion.Euler(0, 0, 180f); // 아래 방향
+
+        // 이미 있다면 재사용
+        markerSeq?.Kill();
+        markerSeq = DOTween.Sequence()
+            .SetAutoKill(false)
+            .SetLoops(-1, LoopType.Restart)
+            .Pause(); // 기본은 멈춰두기
+
+        // 1단계: 살짝 납작해지면서 살짝 올라감
+        markerSeq.Append(
+            arrowUI.DOScaleY(0.8f, 0.08f).SetEase(Ease.OutQuad)
+        );
+        markerSeq.Join(
+            arrowUI.DOAnchorPosY(8f, 0.08f).SetEase(Ease.OutQuad)
+        );
+
+        // 2단계: 원래 비율로 돌아오면서 더 위로
+        markerSeq.Append(
+            arrowUI.DOScaleY(1.1f, 0.12f).SetEase(Ease.OutQuad)
+        );
+        markerSeq.Join(
+            arrowUI.DOAnchorPosY(16f, 0.12f).SetEase(Ease.OutQuad)
+        );
+
+        // 3단계: 스케일/위치 원상복귀
+        markerSeq.Append(
+            arrowUI.DOScaleY(1f, 0.12f).SetEase(Ease.InQuad)
+        );
+        markerSeq.Join(
+            arrowUI.DOAnchorPosY(0f, 0.12f).SetEase(Ease.InQuad)
+        );
+    }
+
     void ShowOnScreenMarker()
     {
-        arrowUI.gameObject.SetActive(false);
-        targetMarkerUI.gameObject.SetActive(true);
+        arrowUI.gameObject.SetActive(true);
 
         // 월드 → 스크린 → 캔버스 로컬
         Vector2 screenPos = cam.WorldToScreenPoint(targetIndicator.position);
@@ -109,9 +119,9 @@ public class TargetIndicator : MonoBehaviour
             canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : cam, 
             out uiPos);
 
-        targetMarkerUI.anchoredPosition = uiPos;
+        arrowUI.anchoredPosition = uiPos;
         // 필요하면 마커 회전 초기화
-        targetMarkerUI.rotation = Quaternion.Euler(0f, 0f, 180f);
+        arrowUI.rotation = Quaternion.Euler(0f, 0f, 180f);
         
         markerSeq?.Play();
     }
@@ -119,7 +129,6 @@ public class TargetIndicator : MonoBehaviour
     void ShowOffScreenArrow(Vector3 viewportPos)
     {
         arrowUI.gameObject.SetActive(true);
-        targetMarkerUI.gameObject.SetActive(false);
 
         markerSeq?.Pause();
 

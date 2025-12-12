@@ -66,6 +66,7 @@ public class TimeFreezeController : MonoBehaviour
 
     public void ActivateTimeSlow()
     {
+        globalVolume.gameObject.SetActive(true);
         targetTimeScale = slowTimeScale;
         targetVolumeWeight = 1f;
         isSlowing = true;

@@ -194,7 +194,7 @@ public class Enemy : Entity
 
         // 현재 목표 지점
         Vector2 targetPos = patrolPoints[patrolIndex].position;
-
+        Debug.Log($"목표 x값 : {targetPos.x}");
         MoveTo(targetPos.x,moveSpeed);
 
         // 도착했으면 다음 포인트로 인덱스 변경
@@ -202,6 +202,7 @@ public class Enemy : Entity
         {
             patrolIndex++;
             if (patrolIndex >= patrolPoints.Length) patrolIndex = 0; // 다시 처음으로
+            Debug.Log($"[Patrol] 도착! length={patrolPoints.Length}");
         }
     }
     public void Warning()
@@ -289,6 +290,11 @@ public class Enemy : Entity
     public override void Attack_End()
     {
         currentState = EnemyState.Chase;
+    }
+
+    public override void Die_End()
+    {
+        gameObject.SetActive(false);
     }
 
 

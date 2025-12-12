@@ -260,6 +260,10 @@ public class PlayerController : Entity
             // faceDir 은 마지막 바라보던 방향 유지
         }
     }
+
+    [SerializeField] float groundCheckLockOnJump = 0.08f;
+    float groundCheckLockTimer;
+    bool IsGroundCheckLocked => groundCheckLockTimer > 0f;
     public void OnJump(InputAction.CallbackContext ctx)
     {
         if (ctx.started)
@@ -326,7 +330,9 @@ public class PlayerController : Entity
     void Handle_Movement()
     {
         float dt = Time.fixedDeltaTime;
-        if (Current == ActionState.Attack)
+        if (Current == ActionState.Attack 
+            || Current == ActionState.Jump 
+            || Current == ActionState.WallJump)
             return;
         if (Current == ActionState.WallSlide)
         {
@@ -342,9 +348,8 @@ public class PlayerController : Entity
             HandleGroundMove(faceDir,dashSpeed,dt);
             return;
         }
-        if (Current == ActionState.Jump 
-            || Current == ActionState.WallJump
-            || Current == ActionState.Fall)
+
+        if (Current == ActionState.Fall)
         {
             HandleAirMove(dt);   // 기존 공중 이동 함수 그대로
             return;
@@ -590,7 +595,17 @@ public class PlayerController : Entity
     void SenseBigState()
     {
         // Ground 우선
-        GroundCheck();
+        if (!IsGroundCheckLocked)
+        {
+            GroundCheck();
+        }
+        else
+        {
+            // 잠금 중에는 '지면 아님'으로 고정(착지 판정 방지)
+            isGround = false;
+            onPlatform = false;
+        }
+        
         if (isGround)
         {
             isWall = false;
@@ -759,10 +774,11 @@ public class PlayerController : Entity
                 anim.SetBool("isRun", false);
                 anim.SetTrigger("isAttack");
                 // 이펙트 테스트
-                hitLineEffect.PlayHitEffect(mouseDirScript.MouseDirection);
+                // hitLineEffect.PlayHitEffect(mouseDirScript.MouseDirection);
                 break;
 
             case ActionState.Jump:
+                groundCheckLockTimer = groundCheckLockOnJump;
                 jumpCount = Mathf.Max(0, jumpCount - 1);
                 rb.linearVelocityY = 0f;
                 rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
@@ -850,8 +866,9 @@ public class PlayerController : Entity
         
         foreach (Collider2D enemy in enemyColliders)
         {
+            // 연출
             CinemachineShake.Instance.Shake(0.2f, 5.0f, 5.0f);
-            
+            hitLineEffect.PlayHitEffect(mouseDirScript.MouseDirection);
             // 적 엔티티
             HP_System entityTarget = enemy.GetComponent<HP_System>();
             entityTarget.Health_Reduce();
@@ -864,6 +881,7 @@ public class PlayerController : Entity
     // ===================== 보조(타이머/애니/이동) =====================
     void TickTimers()
     {
+        if (groundCheckLockTimer > 0f) groundCheckLockTimer -= Time.deltaTime;
         // --- Attack 타이머 ---
         if (attackRemainTime > 0f)
         {

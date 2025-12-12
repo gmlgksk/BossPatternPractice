@@ -1,10 +1,12 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class BossGunner_HP_System : HP_System
 {
     [Header("===== [ Boss_Gunner Options ] =====")]
     [Header("[ Dead ]")]
+    [SerializeField] private StageTransition fadeOutUI;
     [SerializeField] private float launchForce;
     [SerializeField] private Vector2 launchDir = new(1f,0f);
     private TimeController tc;
@@ -63,12 +65,15 @@ public class BossGunner_HP_System : HP_System
         anim.SetTrigger("dead");
         pm.StopPattern_Distance();
         tc.SlowTimeEffectSmooth();
-        Launch(launchForce,launchDir);
+        Launch(launchForce, launchDir);
+        StartCoroutine(StageEnd());
     }
 
-
-
-
+    private IEnumerator StageEnd()
+    {
+        yield return StartCoroutine(fadeOutUI.FadeOutCorutine());
+        LoadNextScene();
+    }
 
     public IEnumerator DamagedEffectCoroutine()
     {
@@ -86,5 +91,11 @@ public class BossGunner_HP_System : HP_System
         // 현재 회전을 기준으로 우측 위 방향 계산
         Vector2 forceDir = dir.normalized;
         rb.AddForce(forceDir * force, ForceMode2D.Impulse);
+    }
+    public void LoadNextScene()
+    {
+        SceneManager.LoadScene(
+            SceneManager.GetActiveScene().buildIndex + 1
+        );
     }
 }
