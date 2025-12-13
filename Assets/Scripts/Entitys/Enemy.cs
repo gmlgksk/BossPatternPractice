@@ -97,9 +97,10 @@ public class Enemy : Entity
         base.Update();
         Handle_State();
         Handle_Information();
+        if (isDie) {currentState = EnemyState.Dead;return;}
+        
         anim.SetFloat("velocityX",rb.linearVelocityX);
 
-        if (isDie) return;
         HandleSight();
         Handle_MovementByState(currentState);
     }
@@ -124,7 +125,6 @@ public class Enemy : Entity
         // [순찰] -> [경계] -> [추적]&[공격] -> [경계] -> [순찰]
         // 공격범위에 들어오면 무조건 [공격]
         if (!isDie && OnAttackRange() && target) currentState = EnemyState.Attack;
-        if ( isDie )currentState = EnemyState.Dead;
         switch (currentState)
         {
             case EnemyState.Dead:

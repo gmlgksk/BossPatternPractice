@@ -82,7 +82,7 @@ public class Laser : MonoBehaviour
         scale.localScale = new Vector2(scale.localScale.x, laserWidth);
         laserSprite.color = Color.yellow;
     }
-    
+    public bool laserOn = false;
     public IEnumerator LaserFireFor(float laserFireDuration)
     {
         float elapsed = 0f;
@@ -90,6 +90,7 @@ public class Laser : MonoBehaviour
         while (elapsed < laserFireDuration)
         {
             elapsed += Time.deltaTime;
+            laserOn = true;
 
             RaycastHit2D hit = Physics2D.Raycast(attackPoint.position, -attackPoint.right, 50, laserHitLayers);
             // 충돌체크 - 벽
@@ -98,7 +99,12 @@ public class Laser : MonoBehaviour
                 scale.localScale = new Vector2 (hit.distance,scale.localScale.y);
                 scale.localPosition = new Vector2 (-hit.distance / 2f, 0);
             }
-
+            if (hit.collider.TryGetComponent(out HP_System playerHp))
+            {
+                Debug.Log("너 피 있어");
+                playerHp.Health_Reduce();
+            }
+            
             if (elapsed >= nextSpawnTime)
             {
                 GameObject effect = Instantiate(hitEffect, hit.point, Quaternion.identity);
@@ -108,6 +114,7 @@ public class Laser : MonoBehaviour
 
             yield return null;
         }
+        laserOn = false;
         nextSpawnTime = 0f;
     }
     
@@ -131,4 +138,6 @@ public class Laser : MonoBehaviour
 
         laserObject.SetActive(false);
     }
+    
+
 }

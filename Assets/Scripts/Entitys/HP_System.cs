@@ -1,11 +1,13 @@
+
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class HP_System : MonoBehaviour
 {
-    public float hp_max;
-    public float hp_current;
-    private Entity entity;
-    private Animator anim;
+    [SerializeField] protected float hp_max;
+    [SerializeField] protected float hp_current;
+    protected Entity entity;
+    protected Animator anim;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     protected virtual void Awake()
     {
@@ -21,10 +23,7 @@ public class HP_System : MonoBehaviour
     }
     protected virtual void Handle_HP()
     {
-        if (hp_current <= 0) 
-        {
-            entity.Die();
-        }
+        if (hp_current<=0) Reaction_Die();
     }
     protected virtual void Health_Init()
     {
@@ -35,7 +34,7 @@ public class HP_System : MonoBehaviour
         if (hp_current > 0)
         {
             hp_current-=1;
-            if (hp_current == 0)    Reaction_Die();
+            if (hp_current <= 0)    Reaction_Die();
             else                    Reaction_hurt();
         }
         else
@@ -67,6 +66,8 @@ public class HP_System : MonoBehaviour
     }
     protected virtual void Reaction_Die()
     { // 사망효과
-        anim.SetTrigger("die");
+        anim.SetTrigger("isDead");
+        new WaitForSeconds(1.5f);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

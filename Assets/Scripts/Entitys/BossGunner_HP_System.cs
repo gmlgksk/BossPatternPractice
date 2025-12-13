@@ -10,7 +10,6 @@ public class BossGunner_HP_System : HP_System
     [SerializeField] private float launchForce;
     [SerializeField] private Vector2 launchDir = new(1f,0f);
     private TimeController tc;
-    private Animator anim;
     private Rigidbody2D rb;
     private PatternManager pm;
     private SpriteRenderer sr;
@@ -23,18 +22,19 @@ public class BossGunner_HP_System : HP_System
 
     protected override void Awake()
     {
-        tc = GetComponent<TimeController>();
-        rb = GetComponent<Rigidbody2D>();
-        sr = GetComponent<SpriteRenderer>();
+        tc      = GetComponent<TimeController>();
+        rb      = GetComponent<Rigidbody2D>();
+        sr      = GetComponent<SpriteRenderer>();
+        pm      = GetComponent<PatternManager>();
+        anim    = GetComponent<Animator>();
         originalColor = sr.color;
         hp_current  = hp_max;
-        pm = GetComponent<PatternManager>();
-        anim = GetComponent<Animator>();
     }
 
     protected override void Handle_HP()
     {
-        // 비워둠
+         if (hp_current <= 0)
+        Reaction_Die();
     }
     protected override void Health_Init()
     {
@@ -43,6 +43,8 @@ public class BossGunner_HP_System : HP_System
         anim.SetTrigger("init");
     }
     
+
+
 
 
     protected override void Reaction_heal()
@@ -62,16 +64,17 @@ public class BossGunner_HP_System : HP_System
 
         pm.StopPattern();
         rb.MoveRotation(0f);
-        anim.SetTrigger("dead");
+        anim.SetTrigger("die");
         pm.StopPattern_Distance();
         tc.SlowTimeEffectSmooth();
         Launch(launchForce, launchDir);
+        new WaitForSeconds(2f);
         StartCoroutine(StageEnd());
     }
-
+    private float fadeOutDuration = 2f;
     private IEnumerator StageEnd()
     {
-        yield return StartCoroutine(fadeOutUI.FadeOutCorutine());
+        yield return StartCoroutine(fadeOutUI.FadeOutCorutine(fadeOutDuration));
         LoadNextScene();
     }
 

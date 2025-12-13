@@ -15,9 +15,9 @@ public class StageTransition : MonoBehaviour
     [ContextMenu("Fade Out 테스트")]
     public void FadeOut() 
     {
-        StartCoroutine(FadeOutCorutine());
+        StartCoroutine(FadeOutCorutine(duration));
     }
-    public IEnumerator FadeOutCorutine()
+    public IEnumerator FadeOutCorutine(float duration)
     {
         float t = 0f;
         while (t < duration)

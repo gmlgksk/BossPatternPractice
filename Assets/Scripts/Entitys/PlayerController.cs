@@ -52,6 +52,7 @@ public class PlayerController : Entity
     bool  wallSlideHolding = false; // 지금 정지 구간인지 여부
 
     [Header("Dash")]
+    [SerializeField] private string superModeLayer;
     [SerializeField] private float dashSpeed = 18f;
 
     [Header("Detect")]
@@ -816,6 +817,7 @@ public class PlayerController : Entity
                 break;
 
             case ActionState.Dash:
+                gameObject.layer = LayerMask.NameToLayer(superModeLayer);
                 anim.SetTrigger("isRoll");
                 break;
 
@@ -846,7 +848,9 @@ public class PlayerController : Entity
             case ActionState.Attack:
                 
                 break;
-            
+            case ActionState.Dash:
+                gameObject.layer = LayerMask.NameToLayer("Player");
+                break;
             // Attack/Dash/Jump/WallJump 등은 타이머로 자연 종료
         }
     }

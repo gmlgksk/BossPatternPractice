@@ -51,15 +51,16 @@ public class PatternManager : MonoBehaviour
     [Header("플레이어 인식 범위")]
     Coroutine _loop;
     bool _running;
-    [SerializeField] private float soClose = 5f;
-    [SerializeField] private float close = 10f;
-    [SerializeField] private float far = 20f;
+    [SerializeField] private float RainDis = 5f;
+    [SerializeField] private float SpinDis = 10f;
+    [SerializeField] private float WideDis = 20f;
     float patternInterval = .4f;
-    float soClose2, close2, far2;
+    float RainDis2, SpinDis2, WideDis2;
 
     private bool loopIsRunning = false;
     private Func<IEnumerator>[] patterns;
     private float loopInterval = 0.5f;
+    public float startDistance = 10f;
     
     void Start()
     {
@@ -73,15 +74,18 @@ public class PatternManager : MonoBehaviour
         patterns = new Func<IEnumerator>[] { WideATKCoroutine, RainATKCoroutine, SpinATKCoroutine };
 
 
-        soClose2 = soClose * soClose;
-        close2   = close   * close;
-        far2     = far     * far;
+        RainDis2 = RainDis * RainDis;
+        SpinDis2 = SpinDis * SpinDis;
+        WideDis2 = WideDis * WideDis;
     }
 
     // Update is called once per frame
     void Update()
     {
         // Quaternion.Euler(0,0,rotationZ); ;
+        if (PlayerDisCheck()<startDistance)
+            StartPattern_Random();
+        
     }
 
     public void StartPattern_Random()
@@ -130,7 +134,7 @@ public class PatternManager : MonoBehaviour
     {
         Vector2 d = (Vector2)PlayerPos.position - (Vector2)transform.position;
         float sqr = d.sqrMagnitude;
-
+        Debug.Log($"플레이어 거리 : {sqr}");
         return sqr;
     }
     // 조건 #2 - 수행할 패턴 판단
@@ -159,9 +163,9 @@ public class PatternManager : MonoBehaviour
         {
             int sector = 0;
             float distance = PlayerDisCheck();
-            if (distance < soClose2) sector = 1;
-            else if (distance < close2) sector = 2;
-            else if (distance < far2) sector = 3;
+            if (distance < RainDis2) sector = 1;
+            else if (distance < SpinDis2) sector = 2;
+            else if (distance < WideDis2) sector = 3;
             else sector = 0;
 
             Debug.Log($"[Boss] dist={distance:F2}, sector={sector}");

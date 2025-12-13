@@ -405,6 +405,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2527246066560462108, guid: 85a1664128670e74a96916775873feb8, type: 3}
+      propertyPath: stageTransition
+      value: 
+      objectReference: {fileID: 986918403}
     - target: {fileID: 4986673582938840231, guid: 85a1664128670e74a96916775873feb8, type: 3}
       propertyPath: m_Name
       value: QuitZone
@@ -1097,6 +1101,17 @@ Tilemap:
     e31: 0
     e32: 0
     e33: 1
+--- !u!114 &986918403 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5014981243875680681, guid: ac702bc398819684fb4461ce0090e86d, type: 3}
+  m_PrefabInstance: {fileID: 1223923811}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bbfb881bdab0414d91045ce1e97842d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StageTransition
 --- !u!213 &1038474990
 Sprite:
   m_ObjectHideFlags: 0

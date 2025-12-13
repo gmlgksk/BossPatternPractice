@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 204961612250947059}
   - component: {fileID: 1678109409249837028}
   - component: {fileID: 2581702081062022481}
-  - component: {fileID: 1745830681976217533}
+  - component: {fileID: 4320854709774790410}
   m_Layer: 7
   m_Name: Enemy_Axe
   m_TagString: Untagged
@@ -262,7 +262,7 @@ MonoBehaviour:
   - {fileID: 0}
   stairs_2: []
   stateText: {fileID: 0}
---- !u!114 &1745830681976217533
+--- !u!114 &4320854709774790410
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -271,9 +271,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 264627694925173772}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0dc2c0b80c85887438f3cda90039c452, type: 3}
+  m_Script: {fileID: 11500000, guid: d9797722f489c214fba02b59b6130614, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HP_System
+  m_EditorClassIdentifier: Assembly-CSharp::Enemy_HP_System
   hp_max: 1
   hp_current: 0
 --- !u!1 &537927889561549329
